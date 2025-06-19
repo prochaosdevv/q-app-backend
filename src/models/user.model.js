@@ -18,7 +18,45 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
+     
+    },
+      bio: {
+      type: String,
+    },
+
+    username: {
+      type: String,
+    },
+    phone: {
+      type: String,
+    },
+    gender: {
+      type: String,
+    },
+    country: {
+      type: String,
+    },
+    dob: {
+      type: String,
+    },
+    image: {
+      type: String,
+    },
+    profileCompleted: {
+     type: Boolean,
+      default: false,
+
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    provider: {
+      type: String, // 'google' | 'apple' | 'local'
+      default: "local",
+    },
+    providerId: {
+      type: String, // ID from Google/apple
     },
   },
   {
@@ -26,15 +64,6 @@ const userSchema = new Schema(
   },
 );
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
-
-userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
-};
 
 const User = mongoose.model("User", userSchema);
 

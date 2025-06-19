@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 import userRoute from "./routes/user.route.js";
+import projectRoute from "./routes/projectRoute.js";
 import connectDB from "./db/index.js";
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/q-app/api/v1/user", userRoute);
+app.use("/q-app/api/v1/project", projectRoute);
 
 try {
   await connectDB();

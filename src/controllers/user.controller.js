@@ -1,10 +1,11 @@
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
 dotenv.config();
 
+// Register User
 const registerUser = async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
@@ -15,22 +16,39 @@ const registerUser = async (req, res) => {
         message: "All fields are required...!!",
       });
     }
+
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if (existingUser) {
       return res.status(400).json({
         success: false,
         message: "Email already registered...!!",
       });
+    }
 
-    const newUser = await User.create({ fullname, email, password });
+      // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+      fullname,
+      email,
+      password: hashedPassword,
+    });
+
+    const token = jwt.sign(
+      { userId: newUser._id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
     res.status(201).json({
       success: true,
       message: "User registered successfully...!!",
+      token,
       user: {
         id: newUser._id,
         fullname: newUser.fullname,
         email: newUser.email,
-        password: newUser.password,
       },
     });
   } catch (error) {
@@ -42,16 +60,18 @@ const registerUser = async (req, res) => {
   }
 };
 
+// Login User
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-
+    
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required...!!",
       });
     }
+    
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -59,19 +79,17 @@ const loginUser = async (req, res) => {
         message: "Invalid email or password",
       });
     }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+    
+       // Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "24h" }
     );
 
     res.status(200).json({
@@ -82,7 +100,6 @@ const loginUser = async (req, res) => {
         id: user._id,
         fullname: user.fullname,
         email: user.email,
-        // other fields if needed
       },
     });
   } catch (error) {
@@ -94,16 +111,17 @@ const loginUser = async (req, res) => {
   }
 };
 
-const geAlltUser = async (req, res) => {
+// Get All Users
+const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
-    res.status(201).json({
+    const users = await User.find().select("-password"); // exclude password
+    res.status(200).json({
       success: true,
       message: "Users fetched successfully...!!",
       users,
     });
   } catch (error) {
-    console.error("Staff fetching error:", error);
+    console.error("User fetching error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error...!!",
@@ -111,4 +129,63 @@ const geAlltUser = async (req, res) => {
   }
 };
 
-export { registerUser, loginUser, geAlltUser };
+
+const socialAuth = async (req, res) => {
+  try {
+    const { email, provider, providerId, fullname, image } = req.body;
+
+    if (!email || !provider || !providerId || !fullname) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required social auth data.",
+      });
+    }
+
+    let user = await User.findOne({ provider, providerId });
+
+    if (!user) {
+      user = new User({
+        email,
+        provider,
+        providerId,
+        fullname,
+        image,
+        password: undefined,
+        profileCompleted: false,
+        verified: true,
+      });
+
+      await user.save({ validateBeforeSave: true });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Social login successful.",
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        fullname: user.fullname,
+        image: user.image,
+        provider: user.provider,
+        profileCompleted: user.profileCompleted,
+      },
+    });
+  } catch (error) {
+    console.error("Social auth error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+
+export { registerUser, loginUser, getAllUsers,socialAuth };
