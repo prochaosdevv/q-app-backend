@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const contributorSchema = new mongoose.Schema({
   email: { type: String, required: true },
@@ -22,8 +22,9 @@ const projectSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const Project = mongoose.model("Project", projectSchema);
-module.exports = Project;
+
+export default Project;

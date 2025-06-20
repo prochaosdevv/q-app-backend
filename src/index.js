@@ -12,7 +12,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "*",
+    origin: "http://192.168.31.227:8081",
     credentials: true,
     methods: ["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

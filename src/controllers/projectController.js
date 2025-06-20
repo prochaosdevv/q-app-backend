@@ -1,8 +1,9 @@
-const AWS = require("aws-sdk");
-const fs = require("fs");
-const formidable = require("formidable");
-const Project = require("../models/project.model");
-require("dotenv").config();
+import AWS from "aws-sdk";
+import fs from "fs";
+import formidable from "formidable";
+import dotenv from "dotenv";
+import Project from "../models/project.js";
+dotenv.config();
 
 // S3 Setup
 const s3Client = new AWS.S3({
@@ -12,7 +13,7 @@ const s3Client = new AWS.S3({
 });
 
 // ========= CREATE Project =========
-const createProject = async (req, res) => {
+export const createProject = async (req, res) => {
   const form = new formidable.IncomingForm();
   form.maxFileSize = 10 * 1024 * 1024;
   form.keepExtensions = true;
@@ -39,13 +40,15 @@ const createProject = async (req, res) => {
         const file = files.image;
         const fileContent = fs.readFileSync(file.filepath);
 
-        const uploadResult = await s3Client.upload({
-          Bucket: process.env.BUCKET_NAME,
-          Key: `projects/${Date.now()}-${file.originalFilename}`,
-          Body: fileContent,
-          ContentType: file.mimetype,
-          ACL: "public-read",
-        }).promise();
+        const uploadResult = await s3Client
+          .upload({
+            Bucket: process.env.BUCKET_NAME,
+            Key: `projects/${Date.now()}-${file.originalFilename}`,
+            Body: fileContent,
+            ContentType: file.mimetype,
+            ACL: "public-read",
+          })
+          .promise();
 
         imageUrl = uploadResult.Location;
       }
@@ -75,7 +78,7 @@ const createProject = async (req, res) => {
 };
 
 // ========= GET All Projects =========
-const getProjects = async (req, res) => {
+export const getProjects = async (req, res) => {
   try {
     const projects = await Project.find().sort({ createdAt: -1 });
     res.status(200).json({
@@ -93,7 +96,7 @@ const getProjects = async (req, res) => {
 };
 
 // ========= UPDATE Project Image =========
-const editProjectImage = async (req, res) => {
+export const editProjectImage = async (req, res) => {
   const form = new formidable.IncomingForm();
   form.maxFileSize = 10 * 1024 * 1024;
   form.keepExtensions = true;
@@ -127,13 +130,15 @@ const editProjectImage = async (req, res) => {
         const file = files.image;
         const fileContent = fs.readFileSync(file.filepath);
 
-        const uploadResult = await s3Client.upload({
-          Bucket: process.env.BUCKET_NAME,
-          Key: `projects/${Date.now()}-${file.originalFilename}`,
-          Body: fileContent,
-          ContentType: file.mimetype,
-          ACL: "public-read",
-        }).promise();
+        const uploadResult = await s3Client
+          .upload({
+            Bucket: process.env.BUCKET_NAME,
+            Key: `projects/${Date.now()}-${file.originalFilename}`,
+            Body: fileContent,
+            ContentType: file.mimetype,
+            ACL: "public-read",
+          })
+          .promise();
 
         project.image = uploadResult.Location;
         await project.save();
@@ -152,10 +157,4 @@ const editProjectImage = async (req, res) => {
       });
     }
   });
-};
-
-module.exports = {
-  createProject,
-  getProjects,
-  editProjectImage,
 };

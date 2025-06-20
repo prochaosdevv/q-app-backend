@@ -25,7 +25,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-      // Hash the password
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -38,7 +38,7 @@ const registerUser = async (req, res) => {
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     res.status(201).json({
@@ -64,14 +64,14 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required...!!",
       });
     }
-    
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -79,17 +79,17 @@ const loginUser = async (req, res) => {
         message: "Invalid email or password",
       });
     }
-    
-       // Validate password
+
+    // Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ error: "Invalid email or password" });
     }
 
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     res.status(200).json({
@@ -129,7 +129,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
 const socialAuth = async (req, res) => {
   try {
     const { email, provider, providerId, fullname, image } = req.body;
@@ -161,7 +160,7 @@ const socialAuth = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     res.status(200).json({
@@ -186,6 +185,4 @@ const socialAuth = async (req, res) => {
   }
 };
 
-
-
-export { registerUser, loginUser, getAllUsers,socialAuth };
+export { registerUser, loginUser, getAllUsers, socialAuth };

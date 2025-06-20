@@ -1,7 +1,11 @@
-const express = require("express");
-const { createProject, getProjects, editProjectImage } = require("../controllers/projectController");
-const router = express.Router();
+import express from "express";
+import {
+  createProject,
+  editProjectImage,
+  getProjects,
+} from "../controllers/projectController.js";
 
+const router = express.Router();
 
 // POST /api/project/create
 router.post("/create", createProject);
@@ -12,4 +16,4 @@ router.get("/", getProjects);
 // PUT /api/project/edit-image
 router.put("/edit-image", editProjectImage);
 
-module.exports = router;
+export default router;
