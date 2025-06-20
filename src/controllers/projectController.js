@@ -42,11 +42,11 @@ export const createProject = async (req, res) => {
 
         const uploadResult = await s3Client
           .upload({
-            Bucket: process.env.BUCKET_NAME,
+            Bucket: process.env.IMAGE_BUCKET,
             Key: `projects/${Date.now()}-${file.originalFilename}`,
             Body: fileContent,
             ContentType: file.mimetype,
-            ACL: "public-read",
+            // ACL: "public-read",
           })
           .promise();
 
@@ -60,6 +60,7 @@ export const createProject = async (req, res) => {
         description,
         image: imageUrl,
         contributors: parsedContributors,
+        createdBy: req.user.userId,
       });
 
       res.status(201).json({
@@ -80,7 +81,7 @@ export const createProject = async (req, res) => {
 // ========= GET All Projects =========
 export const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 });
+    const projects = await Project.find() .populate("createdBy", "fullname email bio image provider").sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
@@ -132,11 +133,10 @@ export const editProjectImage = async (req, res) => {
 
         const uploadResult = await s3Client
           .upload({
-            Bucket: process.env.BUCKET_NAME,
+            Bucket: process.env.IMAGE_BUCKET,
             Key: `projects/${Date.now()}-${file.originalFilename}`,
             Body: fileContent,
             ContentType: file.mimetype,
-            ACL: "public-read",
           })
           .promise();
 
