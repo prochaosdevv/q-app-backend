@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 
 const contributorSchema = new mongoose.Schema({
-  email: { type: String, required: true },
+  email: {
+    type: String,
+    required: true,
+    // unique: true,
+  },
   permission: {
     type: String,
     enum: ["can view", "can edit"],
@@ -16,13 +20,19 @@ const projectSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    description: String,
-    image: String, // S3 image URL
+    description: {
+      type: String,
+      trim: true,
+    },
+    image: {
+      type: String,
+      trim: true,
+    },
     contributors: [contributorSchema],
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 const Project = mongoose.model("Project", projectSchema);
