@@ -5,6 +5,7 @@ import cors from "cors";
 import userRoute from "./routes/user.route.js";
 import projectRoute from "./routes/projectRoute.js";
 import connectDB from "./db/index.js";
+import verifyToken from "./middleware/auth.js";
 dotenv.config();
 
 const port = process.env.PORT || 3001;
@@ -23,7 +24,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/q-app/api/v1/user", userRoute);
-app.use("/q-app/api/v1/project", projectRoute);
+app.use("/q-app/api/v1/project", verifyToken, projectRoute);
 
 try {
   await connectDB();
