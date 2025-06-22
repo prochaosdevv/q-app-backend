@@ -17,10 +17,11 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
-     
+      required: function () {
+        return this.provider === "local";
+      },
     },
-      bio: {
+    bio: {
       type: String,
     },
 
@@ -43,9 +44,8 @@ const userSchema = new Schema(
       type: String,
     },
     profileCompleted: {
-     type: Boolean,
+      type: Boolean,
       default: false,
-
     },
     verified: {
       type: Boolean,
@@ -63,7 +63,6 @@ const userSchema = new Schema(
     timestamps: true,
   },
 );
-
 
 const User = mongoose.model("User", userSchema);
 

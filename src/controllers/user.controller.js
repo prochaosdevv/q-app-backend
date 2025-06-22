@@ -140,21 +140,33 @@ const socialAuth = async (req, res) => {
       });
     }
 
+    // Check if user exists with same provider and providerId
     let user = await User.findOne({ provider, providerId });
 
+    // If not, check if email already exists with a different provider
     if (!user) {
+      const existingUser = await User.findOne({ email });
+
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Email already exists. Please use the original login method.",
+        });
+      }
+
+      // Create new user
       user = new User({
         email,
         provider,
         providerId,
         fullname,
         image,
-        password: undefined,
         profileCompleted: false,
         verified: true,
       });
 
-      await user.save({ validateBeforeSave: true });
+      await user.save();
     }
 
     const token = jwt.sign(
@@ -177,7 +189,7 @@ const socialAuth = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Social auth error:", error);
+    console.error("Social auth error:", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error.",
