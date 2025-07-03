@@ -196,5 +196,38 @@ const socialAuth = async (req, res) => {
     });
   }
 };
+const getUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.params;
 
-export { registerUser, loginUser, getAllUsers, socialAuth };
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required...!!",
+      });
+    }
+
+    const user = await User.findOne({ email }).select("-password");
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with provided email.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User fetched successfully.",
+      user,
+    });
+  } catch (error) {
+    console.error("Get user by email error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error...!!",
+    });
+  }
+};
+
+
+export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail };

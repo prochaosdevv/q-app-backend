@@ -3,6 +3,10 @@ import fs from "fs";
 import formidable from "formidable";
 import dotenv from "dotenv";
 import Project from "../models/project.js";
+import Contributor from "../models/contributor.js";
+import User from "../models/user.model.js";
+import { sendEmail, sendInvitationEmail } from "./emailController.js";
+
 dotenv.config();
 
 // S3 Setup
@@ -27,7 +31,8 @@ export const createProject = async (req, res) => {
     }
 
     try {
-      const { name, description, contributors } = fields;
+      const { name, description } = fields;
+
       if (!name) {
         return res.status(400).json({
           success: false,
@@ -46,26 +51,62 @@ export const createProject = async (req, res) => {
             Key: `projects/${Date.now()}-${file.originalFilename}`,
             Body: fileContent,
             ContentType: file.mimetype,
-            // ACL: "public-read",
           })
           .promise();
 
         imageUrl = uploadResult.Location;
       }
 
-      const parsedContributors = contributors ? JSON.parse(contributors) : [];
-
+      // Create project
       const project = await Project.create({
         name,
         description,
         image: imageUrl,
-        contributors: parsedContributors,
         createdBy: req.user.userId,
       });
 
+      // Handle contributors
+      let parsedContributors = [];
+      if (fields.contributors) {
+        try {
+          parsedContributors = JSON.parse(fields.contributors);
+        } catch (jsonErr) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid JSON format for contributors.",
+          });
+        }
+      }
+
+      await Promise.all(
+        parsedContributors.map(async (contributor) => {
+          let referal = false;
+
+          // Check if user exists
+          const user = await User.findOne({ email: contributor.email });
+
+          if (!user) {
+            referal = true;
+
+            // Send invitation email
+   await sendInvitationEmail(contributor.email, project.name, project._id);
+
+          }
+
+          await Contributor.create({
+            email: contributor.email,
+            permission: contributor.permission || "can view",
+            userId: user ? user._id : null,
+            referal,
+            project: project._id,
+            status: user ? 1 : 0,
+          });
+        }),
+      );
+
       res.status(201).json({
         success: true,
-        message: "Project created successfully.",
+        message: "Project created successfully, invitations sent if needed.",
         project,
       });
     } catch (error) {
@@ -78,14 +119,83 @@ export const createProject = async (req, res) => {
   });
 };
 
-// ========= GET All Projects =========
+export const addContributorsToProject = async (req, res) => {
+  try {
+    const { projectId, contributors } = req.body;
+
+    if (!projectId || !Array.isArray(contributors) || contributors.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID and contributors array are required.",
+      });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found.",
+      });
+    }
+
+    await Promise.all(
+      contributors.map(async (contributor) => {
+        let referal = false;
+        const user = await User.findOne({ email: contributor.email });
+
+        if (!user) {
+          referal = true;
+             await sendInvitationEmail(contributor.email, project.name, project._id);
+        }
+
+        await Contributor.create({
+          email: contributor.email,
+          permission: contributor.permission || "can view",
+          userId: user ? user._id : null,
+          referal,
+          project: projectId,
+          status: user ? 1 : 0,
+        });
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Contributors added successfully. Invitations sent if needed.",
+    });
+  } catch (error) {
+    console.error("Add contributors error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
 export const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find() .populate("createdBy", "fullname email bio image provider").sort({ createdAt: -1 });
+    const projects = await Project.find()
+      .populate("createdBy", "fullname email bio image provider")
+      .sort({ createdAt: -1 });
+
+    const projectsWithContributors = await Promise.all(
+      projects.map(async (project) => {
+        const contributors = await Contributor.find({
+          project: project._id,
+        }).populate("userId", "fullname email image");
+
+        return {
+          ...project.toObject(),
+          contributors,
+        };
+      }),
+    );
+
     res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      projects,
+      projects: projectsWithContributors,
     });
   } catch (error) {
     console.error("Fetching projects error:", error);
@@ -96,65 +206,198 @@ export const getProjects = async (req, res) => {
   }
 };
 
-// ========= UPDATE Project Image =========
-export const editProjectImage = async (req, res) => {
-  const form = new formidable.IncomingForm();
-  form.maxFileSize = 10 * 1024 * 1024;
-  form.keepExtensions = true;
+export const getProjectById = async (req, res) => {
+  try {
+    const { projectId } = req.params;
 
-  form.parse(req, async (err, fields, files) => {
-    if (err) {
-      return res.status(500).json({
+    if (!projectId) {
+      return res.status(400).json({
         success: false,
-        message: "Form parsing error: " + err.message,
+        message: "Project ID is required.",
       });
     }
 
-    try {
-      const { projectId } = fields;
-      if (!projectId) {
-        return res.status(400).json({
-          success: false,
-          message: "Project ID is required.",
-        });
-      }
+    const project = await Project.findById(projectId)
+      .populate("createdBy", "fullname email bio image provider");
 
-      const project = await Project.findById(projectId);
-      if (!project) {
-        return res.status(404).json({
-          success: false,
-          message: "Project not found.",
-        });
-      }
-
-      if (files.image) {
-        const file = files.image;
-        const fileContent = fs.readFileSync(file.filepath);
-
-        const uploadResult = await s3Client
-          .upload({
-            Bucket: process.env.IMAGE_BUCKET,
-            Key: `projects/${Date.now()}-${file.originalFilename}`,
-            Body: fileContent,
-            ContentType: file.mimetype,
-          })
-          .promise();
-
-        project.image = uploadResult.Location;
-        await project.save();
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Project image updated successfully.",
-        project,
-      });
-    } catch (error) {
-      console.error("Update image error:", error);
-      res.status(500).json({
+    if (!project) {
+      return res.status(404).json({
         success: false,
-        message: "Internal server error.",
+        message: "Project not found.",
       });
     }
-  });
+
+    const contributors = await Contributor.find({ project: projectId })
+      .populate("userId", "fullname email image");
+
+    res.status(200).json({
+      success: true,
+      message: "Project fetched successfully.",
+      project: {
+        ...project.toObject(),
+        contributors,
+      },
+    });
+  } catch (error) {
+    console.error("Fetching project by ID error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+export const signupContributor = async (req, res) => {
+  try {
+    const { fullname, email, password, contributorId } = req.body;
+
+    if (!fullname || !email || !password || !contributorId) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required...!!",
+      });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new user
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      user = await User.create({
+        fullname,
+        email,
+        password: hashedPassword,
+      });
+    }
+
+    // Now update the contributor entry
+    const contributor = await Contributor.findById(contributorId);
+    if (!contributor) {
+      return res.status(404).json({
+        success: false,
+        message: "Contributor invitation not found...!!",
+      });
+    }
+
+    contributor.userId = user._id;
+    contributor.status = 1; // signed up
+    await contributor.save();
+
+    // Issue token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" },
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Contributor signed up successfully...!!",
+      token,
+      user: {
+        id: user._id,
+        fullname: user.fullname,
+        email: user.email,
+      },
+      contributor,
+    });
+  } catch (error) {
+    console.error("Contributor signup error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error...!!",
+    });
+  }
+};
+
+// Accept invitation
+export const acceptInvitation = async (req, res) => {
+  try {
+    const { contributorId } = req.body;
+
+    const contributor = await Contributor.findById(contributorId);
+    if (!contributor) {
+      return res.status(404).json({
+        success: false,
+        message: "Invitation not found.",
+      });
+    }
+
+    contributor.invitationStatus = "accepted";
+    await contributor.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Invitation accepted.",
+      contributor,
+    });
+  } catch (err) {
+    console.error("Accept invitation error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+// Decline invitation
+export const declineInvitation = async (req, res) => {
+  try {
+    const { contributorId } = req.body;
+
+    const contributor = await Contributor.findById(contributorId);
+    if (!contributor) {
+      return res.status(404).json({
+        success: false,
+        message: "Invitation not found.",
+      });
+    }
+
+    contributor.invitationStatus = "declined";
+    await contributor.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Invitation declined.",
+      contributor,
+    });
+  } catch (err) {
+    console.error("Decline invitation error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+export const getContributorsByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is required.",
+      });
+    }
+
+    const contributors = await Contributor.find({
+      project: projectId,
+    }).populate("userId", "fullname email image");
+
+    res.status(200).json({
+      success: true,
+      message: "Contributors fetched successfully.",
+      contributors,
+    });
+  } catch (error) {
+    console.error("Get contributors by project error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
 };

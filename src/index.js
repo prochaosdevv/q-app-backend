@@ -24,7 +24,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/q-app/api/v1/user", userRoute);
-app.use("/q-app/api/v1/project", verifyToken, projectRoute);
+app.use("/q-app/api/v1/project", projectRoute);
 
 try {
   await connectDB();

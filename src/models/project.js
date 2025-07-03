@@ -1,21 +1,9 @@
+// models/Project.js
 import mongoose from "mongoose";
-
-const contributorSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    // unique: true,
-  },
-  permission: {
-    type: String,
-    enum: ["can view", "can edit"],
-    default: "can view",
-  },
-});
 
 const projectSchema = new mongoose.Schema(
   {
-      createdBy: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -33,11 +21,10 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    contributors: [contributorSchema],
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const Project = mongoose.model("Project", projectSchema);
