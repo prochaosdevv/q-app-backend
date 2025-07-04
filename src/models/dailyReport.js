@@ -26,6 +26,7 @@ const dailyReportSchema = new mongoose.Schema(
     plant: {
       type: String,
     },
+    photos: [String], // array of image URLs
   },
   { timestamps: true },
 );
