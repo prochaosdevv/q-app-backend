@@ -163,8 +163,13 @@ export const getReportsByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    const reports = await DailyReport.find({ project: projectId })
+       const reports = await DailyReport.find({ project: projectId })
+      .populate("project") 
+      .populate("labour")
+      .populate("material")
+      .populate("weather")
       .sort({ date: -1 });
+
 
     res.status(200).json({
       success: true,
