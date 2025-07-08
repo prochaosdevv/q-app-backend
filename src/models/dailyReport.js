@@ -11,24 +11,31 @@ const dailyReportSchema = new mongoose.Schema(
       type: String,
     },
     weather: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Weather",
     },
     delays: {
-      type: Number, // in hours
+      type: Number,
       default: 0,
     },
-    labour: {
-      type: String,
-    },
-    material: {
-      type: String,
-    },
+    labour: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Labour",
+      }
+    ],
+    material: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Material",
+      }
+    ],
     plant: {
       type: String,
     },
-    photos: [String], // array of image URLs
+    photos: [String],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const DailyReport = mongoose.model("DailyReport", dailyReportSchema);
