@@ -34,6 +34,8 @@ const dailyReportSchema = new mongoose.Schema(
       type: String,
     },
     photos: [String],
+
+
   },
   { timestamps: true }
 );

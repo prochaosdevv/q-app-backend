@@ -401,3 +401,71 @@ export const getContributorsByProject = async (req, res) => {
     });
   }
 };
+
+
+export const markProjectReportAsSent = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      { reportSent: true },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Project marked as report sent.",
+      project,
+    });
+
+  } catch (error) {
+    console.error("Mark project report sent error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+export const markProjectDailyLogCompleted = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      { dailyLogCompleted: true },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Project marked as daily log completed.",
+      project,
+    });
+
+  } catch (error) {
+    console.error("Mark project daily log completed error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+

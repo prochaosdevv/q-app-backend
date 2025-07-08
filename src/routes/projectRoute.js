@@ -7,7 +7,9 @@ import {
   declineInvitation,
   getContributorsByProject,
   addContributorsToProject,
-  getProjectById
+  getProjectById,
+  markProjectReportAsSent,
+  markProjectDailyLogCompleted
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, deleteDailyReport, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
@@ -25,6 +27,8 @@ router.get("/",verifyToken, getProjects);
 
 // GET /api/project/by/id
 router.get("/:projectId", getProjectById);
+router.put("/mark-sent/:projectId", markProjectReportAsSent);
+router.put("/mark-completed/:projectId", markProjectDailyLogCompleted);
 
 
 // POST /api/project/signup-contributor
