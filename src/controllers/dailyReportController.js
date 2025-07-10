@@ -293,29 +293,35 @@ export const deleteDailyReport = async (req, res) => {
 
 
 
-// Get reports by project
-export const getReportsByProject = async (req, res) => {
+// Get reports by id
+export const getReportById = async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const { reportId } = req.params;
 
-       const reports = await DailyReport.find({ project: projectId })
-      .populate("project") 
+    const report = await DailyReport.findById(reportId)
+      .populate("project")
       .populate("labour")
       .populate("material")
-      .populate("weather")
-      .sort({ date: -1 });
+      .populate("weather");
 
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: "Report not found.",
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: "Reports fetched successfully.",
-      reports,
+      message: "Report fetched successfully.",
+      report,
     });
   } catch (error) {
-    console.error("Get reports by project error:", error);
+    console.error("Get report by ID error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error.",
     });
   }
 };
+
