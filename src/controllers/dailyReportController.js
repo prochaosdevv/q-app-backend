@@ -291,6 +291,32 @@ export const deleteDailyReport = async (req, res) => {
   }
 };
 
+// Get reports by projectId
+export const getReportsByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const reports = await DailyReport.find({ project: projectId })
+      .populate("project")
+      .populate("labour")
+      .populate("material")
+      .populate("weather")
+      .sort({ date: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Reports fetched successfully.",
+      reports,
+    });
+  } catch (error) {
+    console.error("Get reports by project error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
 
 
 // Get reports by id
