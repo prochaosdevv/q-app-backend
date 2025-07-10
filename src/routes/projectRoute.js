@@ -45,7 +45,7 @@ router.get("/contributors/:projectId", getContributorsByProject);
 
 router.post("/daily-report/create", createDailyReport);
 router.get("/daily-report/:reportId", getReportById); 
-router.get("/daily-report/:projectId", getReportsByProject); 
+router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.put("/daily-report/update/:reportId", updateDailyReport); // accepts form-data with reportId
 router.delete("/daily-report/:reportId", deleteDailyReport); 
 
