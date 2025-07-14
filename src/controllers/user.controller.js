@@ -229,5 +229,47 @@ const getUserByEmail = async (req, res) => {
   }
 };
 
+// changePassword 
+const changePassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
 
-export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail };
+    if (!email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and new password are required.",
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with provided email.",
+      });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update user password
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+
+export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail,changePassword };
