@@ -13,6 +13,7 @@ import {
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, deleteDailyReport, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
+import { getDailyReportsByWeeklyGoal, getWeeklyGoalsByProjectId } from "../controllers/weeklyGoalController.js";
 
 const router = express.Router();
 
@@ -48,5 +49,7 @@ router.get("/daily-report/:reportId", getReportById);
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.put("/daily-report/update/:reportId", updateDailyReport); // accepts form-data with reportId
 router.delete("/daily-report/:reportId", deleteDailyReport); 
+router.get("/weekly/goal/by/:projectId", getWeeklyGoalsByProjectId)
+router.get("/daily-report/by/weekly/goal/:weeklyGoalId", getDailyReportsByWeeklyGoal)
 
 export default router;

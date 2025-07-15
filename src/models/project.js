@@ -21,14 +21,14 @@ const projectSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-  dailyLogCompleted: {
-  type: Boolean,
-  default: false
-},
-reportSent: {
-  type: Boolean,
-  default: false
-},
+    dailyLogCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    reportSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

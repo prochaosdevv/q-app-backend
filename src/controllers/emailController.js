@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 export async function sendEmail(toAddress, subject, text, html) {
   try {
     const transporter = nodemailer.createTransport({
-      service: 'Gmail',
+      service: "Gmail",
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -25,7 +25,7 @@ export async function sendEmail(toAddress, subject, text, html) {
 }
 
 export async function sendInvitationEmail(email, projectName, projectId) {
-  const inviteLink = `${process.env.FRONTEND_URL}/accept-invite?projectId=${projectId}`;
+  const inviteLink = `${process.env.FRONTEND_URL}/signup?projectId=${projectId}`;
 
   await sendEmail(
     email,
@@ -43,6 +43,6 @@ ${inviteLink}`,
       <br>
       <p>— The Quentessential App Team</p>
     </div>
-    `
+    `,
   );
 }

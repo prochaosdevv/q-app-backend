@@ -6,6 +6,7 @@ import Project from "../models/project.js";
 import Contributor from "../models/contributor.js";
 import User from "../models/user.model.js";
 import { sendEmail, sendInvitationEmail } from "./emailController.js";
+import WeeklyGoal from "../models/weeklyGoal.js";
 
 dotenv.config();
 
@@ -104,9 +105,28 @@ export const createProject = async (req, res) => {
         }),
       );
 
+         // ✨ CREATE 4 random weekly goals
+      const now = new Date();
+      let startDate = new Date(now);
+
+      for (let i = 1; i <= 4; i++) {
+        let endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 7); // next week
+        await WeeklyGoal.create({
+          project: project._id,
+          title: `Weekly Goal ${i}`,
+          description: `Description for weekly goal ${i}`,
+          startDate,
+          endDate,
+        });
+
+        // next goal starts where this one ended
+        startDate = new Date(endDate);
+      }
+
       res.status(201).json({
         success: true,
-        message: "Project created successfully, invitations sent if needed.",
+        message: "Project created with 4 weekly goals, invitations sent if needed.",
         project,
       });
     } catch (error) {
@@ -179,15 +199,20 @@ export const getProjects = async (req, res) => {
       .populate("createdBy", "fullname email bio image provider")
       .sort({ createdAt: -1 });
 
-    const projectsWithContributors = await Promise.all(
+    const projectsWithDetails = await Promise.all(
       projects.map(async (project) => {
         const contributors = await Contributor.find({
           project: project._id,
         }).populate("userId", "fullname email image");
 
+        const weeklyGoals = await WeeklyGoal.find({
+          project: project._id,
+        }).sort({ startDate: 1 }); // optional: order by startDate
+
         return {
           ...project.toObject(),
           contributors,
+          weeklyGoals,
         };
       }),
     );
@@ -195,7 +220,7 @@ export const getProjects = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Projects fetched successfully.",
-      projects: projectsWithContributors,
+      projects: projectsWithDetails,
     });
   } catch (error) {
     console.error("Fetching projects error:", error);
@@ -205,6 +230,7 @@ export const getProjects = async (req, res) => {
     });
   }
 };
+
 
 export const getProjectById = async (req, res) => {
   try {

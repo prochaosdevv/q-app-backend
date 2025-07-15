@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import Otp from "../models/otp.js";
+import { sendEmail } from "./emailController.js";
 
 dotenv.config();
 
@@ -232,29 +234,32 @@ const getUserByEmail = async (req, res) => {
 // changePassword 
 const changePassword = async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
+    const { oldPassword, newPassword } = req.body;
 
-    if (!email || !newPassword) {
+    if (!oldPassword || !newPassword) {
       return res.status(400).json({
         success: false,
-        message: "Email and new password are required.",
+        message: "Old password and new password are required.",
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found with provided email.",
+        message: "User not found.",
       });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Old password is incorrect.",
+      });
+    }
 
-    // Update user password
-    user.password = hashedNewPassword;
+    user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
     res.status(200).json({
@@ -270,6 +275,157 @@ const changePassword = async (req, res) => {
   }
 };
 
+// 1️⃣ Request OTP
+const requestOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with this email.",
+      });
+    }
+
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+    await Otp.create({
+      user: user._id,
+      otp: otpCode,
+      status: "pending",
+    });
+
+    const otpToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "2m" }
+    );
+
+await sendEmail(
+  user.email,
+  "Your OTP for Password Reset",
+  `Hello,
+
+We received a request to reset your password. Use the following OTP: ${otpCode}
+
+This OTP is valid for 2 minutes. If you did not request this, please ignore this email.
+
+Thank you,
+The Quentessential Team`,
+  `<p>Hello,</p>
+  <p>We received a request to reset your password. Please use the one-time password (OTP) below to proceed:</p>
+  <p style="font-size: 16px; font-weight: bold;">${otpCode}</p>
+  <p>This OTP is valid for <strong>2 minutes</strong>. If you did not request this, please ignore this email.</p>
+  <p>Thank you,<br/>The Quentessential Team</p>`
+);
 
 
-export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail,changePassword };
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to your email.",
+      token: otpToken,
+    });
+  } catch (error) {
+    console.error("Request OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+// 2️⃣ Verify OTP
+const verifyOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP is required.",
+      });
+    }
+
+    const userId = req.user.userId;
+
+    const otpRecord = await Otp.findOne({
+      user: userId,
+      otp,
+      status: "pending",
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+    });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+
+// 3️⃣ Reset Password
+const resetPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password is required.",
+      });
+    }
+
+    const userId = req.user.userId;
+
+    const otpRecord = await Otp.findOne({
+      user: userId,
+      status: "pending",
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not verified or expired.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(userId, { password: hashedPassword });
+
+    otpRecord.status = "used";
+    await otpRecord.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
+
+
+
+export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail,changePassword,requestOtp,
+  verifyOtp,
+  resetPassword };
