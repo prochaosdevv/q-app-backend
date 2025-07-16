@@ -298,9 +298,18 @@ export const getReportsByProject = async (req, res) => {
 
     const reports = await DailyReport.find({ project: projectId })
       .populate("project")
-      .populate("labour")
-      .populate("material")
-      .populate("weather")
+         .populate({
+        path: "labour",
+        select: "labour desc qty createdAt updatedAt"
+      })
+      .populate({
+        path: "material",
+        select: "name desc qty unit createdAt updatedAt"
+      })
+      .populate({
+        path: "weather",
+        select: "condition temperature humidity windSpeed remarks createdAt updatedAt"
+      })
       .sort({ date: -1 });
 
     res.status(200).json({
