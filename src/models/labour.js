@@ -1,13 +1,13 @@
 // models/Contributor.js
 import mongoose from "mongoose";
 
-const contributorSchema = new mongoose.Schema(
+const labourSchema = new mongoose.Schema(
   {
-    labour: {
+    name: {
       type: String,
    
     },
-    desc: {
+    role: {
       type: String,
       
     },
@@ -22,6 +22,6 @@ const contributorSchema = new mongoose.Schema(
   },
 );
 
-const Contributor = mongoose.model("Labour", contributorSchema);
+const Labour = mongoose.model("Labour", labourSchema);
 
-export default Contributor;
+export default Labour;
