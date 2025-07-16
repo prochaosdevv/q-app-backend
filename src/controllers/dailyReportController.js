@@ -317,6 +317,35 @@ export const getReportsByProject = async (req, res) => {
   }
 };
 
+export const getPastReportsByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const reports = await DailyReport.find({
+      project: projectId,
+      createdAt: { $lte: today },
+    })
+      .populate("project")
+      .populate("labour")
+      .populate("material")
+      .populate("weather")
+      .sort({ date: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Past reports fetched successfully.",
+      reports,
+    });
+  } catch (error) {
+    console.error("Get past reports by project error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
 
 
 // Get reports by id
