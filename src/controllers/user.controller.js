@@ -301,23 +301,23 @@ const requestOtp = async (req, res) => {
       { expiresIn: "2m" }
     );
 
-await sendEmail(
-  user.email,
-  "Your OTP for Password Reset",
-  `Hello,
+// await sendEmail(
+//   user.email,
+//   "Your OTP for Password Reset",
+//   `Hello,
 
-We received a request to reset your password. Use the following OTP: ${otpCode}
+// We received a request to reset your password. Use the following OTP: ${otpCode}
 
-This OTP is valid for 2 minutes. If you did not request this, please ignore this email.
+// This OTP is valid for 2 minutes. If you did not request this, please ignore this email.
 
-Thank you,
-The Quentessential Team`,
-  `<p>Hello,</p>
-  <p>We received a request to reset your password. Please use the one-time password (OTP) below to proceed:</p>
-  <p style="font-size: 16px; font-weight: bold;">${otpCode}</p>
-  <p>This OTP is valid for <strong>2 minutes</strong>. If you did not request this, please ignore this email.</p>
-  <p>Thank you,<br/>The Quentessential Team</p>`
-);
+// Thank you,
+// The Quentessential Team`,
+//   `<p>Hello,</p>
+//   <p>We received a request to reset your password. Please use the one-time password (OTP) below to proceed:</p>
+//   <p style="font-size: 16px; font-weight: bold;">${otpCode}</p>
+//   <p>This OTP is valid for <strong>2 minutes</strong>. If you did not request this, please ignore this email.</p>
+//   <p>Thank you,<br/>The Quentessential Team</p>`
+// );
 
 
 
