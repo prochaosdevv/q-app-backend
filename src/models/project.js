@@ -25,6 +25,12 @@ const projectSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    status: {
+      type: Number,
+      enum: [0, 1, 2], // 0 = active, 1 = completed, 2 = archived
+      default: 0,
+    },
+
     reportSent: {
       type: Boolean,
       default: false,

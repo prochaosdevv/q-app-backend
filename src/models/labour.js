@@ -5,15 +5,15 @@ const labourSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-   
     },
     role: {
       type: String,
-      
+    },
+    hours: {
+      type: String,
     },
     qty: {
     type: Number,
-  
     },
 
   },

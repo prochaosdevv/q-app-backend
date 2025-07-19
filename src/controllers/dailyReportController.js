@@ -379,4 +379,22 @@ export const getReportById = async (req, res) => {
     });
   }
 };
+// delaySuggestion 
+export const delaySuggestion = async (req, res) => {
+  try {
+    const uniqueDelays = await DailyReport.distinct("delays");
+
+    res.status(200).json({
+      success: true,
+      message: "Unique delays fetched successfully.",
+      delays: uniqueDelays.sort((a, b) => a - b), // optional: sort numerically
+    });
+  } catch (error) {
+    console.error("Error fetching delay suggestions:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching delay suggestions.",
+    });
+  }
+};
 

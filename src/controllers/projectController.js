@@ -105,28 +105,28 @@ export const createProject = async (req, res) => {
         }),
       );
 
-         // ✨ CREATE 4 random weekly goals
-      const now = new Date();
-      let startDate = new Date(now);
+      //    // ✨ CREATE 4 random weekly goals
+      // const now = new Date();
+      // let startDate = new Date(now);
 
-      for (let i = 1; i <= 4; i++) {
-        let endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 7); // next week
-        await WeeklyGoal.create({
-          project: project._id,
-          title: `Weekly Goal ${i}`,
-          description: `Description for weekly goal ${i}`,
-          startDate,
-          endDate,
-        });
+      // for (let i = 1; i <= 4; i++) {
+      //   let endDate = new Date(startDate);
+      //   endDate.setDate(endDate.getDate() + 7); // next week
+      //   await WeeklyGoal.create({
+      //     project: project._id,
+      //     title: `Weekly Goal ${i}`,
+      //     description: `Description for weekly goal ${i}`,
+      //     startDate,
+      //     endDate,
+      //   });
 
-        // next goal starts where this one ended
-        startDate = new Date(endDate);
-      }
+      //   // next goal starts where this one ended
+      //   startDate = new Date(endDate);
+      // }
 
       res.status(201).json({
         success: true,
-        message: "Project created with 4 weekly goals, invitations sent if needed.",
+        message: "Project created, invitations sent if needed.",
         project,
       });
     } catch (error) {
@@ -494,4 +494,63 @@ export const markProjectDailyLogCompleted = async (req, res) => {
   }
 };
 
+// archiveProject 
+export const archiveProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user.userId;
+
+    const project = await Project.findOneAndUpdate(
+      { _id: projectId, createdBy: userId },
+      { status: 2 },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found or you are not the owner.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Project archived successfully.",
+      project,
+    });
+  } catch (error) {
+    console.error("Archive project error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+// deleteProject 
+export const deleteProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user.userId;
+
+    const project = await Project.findOne({ _id: projectId, createdBy: userId });
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found or you're not authorized.",
+      });
+    }
+
+    await Contributor.deleteMany({ project: projectId });
+    await WeeklyGoal.deleteMany({ project: projectId });
+    await Project.findByIdAndDelete(projectId);
+
+    res.status(200).json({
+      success: true,
+      message: "Project and related data deleted.",
+    });
+  } catch (error) {
+    console.error("Delete project error:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
 

@@ -24,30 +24,16 @@ const userSchema = new Schema(
     bio: {
       type: String,
     },
-
     username: {
       type: String,
     },
     phone: {
       type: String,
     },
-    gender: {
-      type: String,
-    },
-    country: {
-      type: String,
-    },
-    dob: {
-      type: String,
-    },
     image: {
       type: String,
     },
     profileCompleted: {
-      type: Boolean,
-      default: false,
-    },
-    verified: {
       type: Boolean,
       default: false,
     },

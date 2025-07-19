@@ -1,11 +1,34 @@
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import formidable from "formidable";
 import User from "../models/user.model.js";
 import Otp from "../models/otp.js";
 import { sendEmail } from "./emailController.js";
+import AWS from "aws-sdk";
+import fs from "fs";
 
 dotenv.config();
+
+const s3Client = new AWS.S3({
+  secretAccessKey: process.env.ACCESS_KEY,
+  accessKeyId: process.env.ACCESS_ID,
+  region: process.env.region,
+});
+
+// Helper to upload a file to S3
+const uploadToS3 = async (file) => {
+  const fileContent = fs.readFileSync(file.filepath);
+
+  const upload = await s3Client.upload({
+    Bucket: process.env.IMAGE_BUCKET,
+    Key: `daily-reports/${Date.now()}-${file.originalFilename}`,
+    Body: fileContent,
+    ContentType: file.mimetype,
+  }).promise();
+
+  return upload.Location;
+};
 
 // Register User
 const registerUser = async (req, res) => {
@@ -422,10 +445,69 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Update User Profile
+const updateUserProfile = async (req, res) => {
+  const form = new formidable.IncomingForm();
+  form.keepExtensions = true;
+
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: "Form parsing error.",
+      });
+    }
+
+    try {
+      const userId = req.user.userId;
+      const { fullname, username, bio } = fields;
+
+      let updateFields = {
+        fullname,
+        username,
+        bio,
+        profileCompleted: true, 
+      };
+
+      if (files.image) {
+        const imageUrl = await uploadToS3(files.image);
+        updateFields.image = imageUrl;
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        updateFields,
+        { new: true, runValidators: true }
+      ).select("-password");
+
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Profile updated successfully.",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error.",
+      });
+    }
+  });
+};
+
+
+
 
 
 
 
 export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail,changePassword,requestOtp,
   verifyOtp,
-  resetPassword };
+  resetPassword,updateUserProfile };

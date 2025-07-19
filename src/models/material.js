@@ -9,6 +9,9 @@ const materialSchema = new mongoose.Schema(
     desc: {
       type: String,
     },
+    unit: {
+      type: String,
+    },
     qty: {
       type: Number,
       // required: true,

@@ -9,11 +9,13 @@ import {
   addContributorsToProject,
   getProjectById,
   markProjectReportAsSent,
-  markProjectDailyLogCompleted
+  markProjectDailyLogCompleted,
+  archiveProject,
+  deleteProject
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
-import { createDailyReport, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
-import { getDailyReportsByWeeklyGoal, getWeeklyGoalsByProjectId } from "../controllers/weeklyGoalController.js";
+import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
+import { createWeeklyGoal, deleteWeeklyGoal, getDailyReportsByWeeklyGoal, getWeeklyGoalById, getWeeklyGoalsByProjectId, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
 
 const router = express.Router();
 
@@ -25,6 +27,13 @@ router.post("/add-contributors", addContributorsToProject);
 
 // GET /api/project
 router.get("/",verifyToken, getProjects);
+
+// Route to archive a project (status: 2 = archived)
+router.put("/archive/by/:projectId", verifyToken, archiveProject);
+
+// Route to delete a project and related data
+router.delete("/delete/by/:projectId", verifyToken, deleteProject);
+
 
 // GET /api/project/by/id
 router.get("/:projectId", getProjectById);
@@ -49,8 +58,14 @@ router.get("/daily-report/:reportId", getReportById);
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.get("/get/past-report/by/:projectId", getPastReportsByProject); 
 router.put("/daily-report/update/:reportId", updateDailyReport); // accepts form-data with reportId
-router.delete("/daily-report/:reportId", deleteDailyReport); 
-router.get("/weekly/goal/by/:projectId", getWeeklyGoalsByProjectId)
-router.get("/daily-report/by/weekly/goal/:weeklyGoalId", getDailyReportsByWeeklyGoal)
+router.get("/get/all/delay-suggestions", delaySuggestion);
+
+// weeklyGoals
+router.post("/weekly-goal/create", createWeeklyGoal);
+router.get("/weekly-goal/:id", getWeeklyGoalById);
+router.put("/weekly-goal/update/:id", updateWeeklyGoal);
+router.delete("/weekly-goal/:id", deleteWeeklyGoal);
+router.get("/weekly/goal/by/:projectId", getWeeklyGoalsByProjectId);
+router.get("/daily-report/by/weekly/goal/:weeklyGoalId", getDailyReportsByWeeklyGoal);
 
 export default router;
