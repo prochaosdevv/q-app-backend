@@ -382,7 +382,10 @@ export const getReportById = async (req, res) => {
 // delaySuggestion 
 export const delaySuggestion = async (req, res) => {
   try {
-    const uniqueDelays = await DailyReport.distinct("delays");
+   const uniqueDelays = await DailyReport.distinct("delays", {
+      delays: { $ne: null, $exists: true, $ne: "" },
+    });
+
 
     res.status(200).json({
       success: true,

@@ -16,7 +16,7 @@ const dailyReportSchema = new mongoose.Schema(
     },
     delays: {
       type: Number,
-      default: 0,
+      default: null,
     },
     labour: [
       {
