@@ -7,6 +7,7 @@ import Contributor from "../models/contributor.js";
 import User from "../models/user.model.js";
 import { sendEmail, sendInvitationEmail } from "./emailController.js";
 import WeeklyGoal from "../models/weeklyGoal.js";
+import DailyReport from "../models/dailyReport.js";
 
 dotenv.config();
 
@@ -462,37 +463,46 @@ export const markProjectReportAsSent = async (req, res) => {
 };
 
 
-export const markProjectDailyLogCompleted = async (req, res) => {
+export const markProjectDailyLogStatus = async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const { reportId } = req.params;
+    const { status } = req.body;
 
-    const project = await Project.findByIdAndUpdate(
-      projectId,
-      { dailyLogCompleted: true },
+    if (typeof status === 'undefined') {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required in the request body.",
+      });
+    }
+
+    const report = await DailyReport.findByIdAndUpdate(
+      reportId,
+      { status },
       { new: true }
     );
 
-    if (!project) {
+    if (!report) {
       return res.status(404).json({
         success: false,
-        message: "Project not found.",
+        message: "Daily report not found.",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Project marked as daily log completed.",
-      project,
+      message: "Daily report status updated successfully.",
+      report,
     });
 
   } catch (error) {
-    console.error("Mark project daily log completed error:", error);
+    console.error("Error updating daily report status:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error.",
     });
   }
 };
+
 
 // archiveProject 
 export const archiveProject = async (req, res) => {

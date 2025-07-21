@@ -9,7 +9,7 @@ import {
   addContributorsToProject,
   getProjectById,
   markProjectReportAsSent,
-  markProjectDailyLogCompleted,
+  markProjectDailyLogStatus,
   archiveProject,
   deleteProject
 } from "../controllers/projectController.js";
@@ -38,7 +38,7 @@ router.delete("/delete/by/:projectId", verifyToken, deleteProject);
 // GET /api/project/by/id
 router.get("/:projectId", getProjectById);
 router.put("/mark-sent/:projectId", markProjectReportAsSent);
-router.put("/mark-completed/:projectId", markProjectDailyLogCompleted);
+
 
 
 // POST /api/project/signup-contributor
@@ -57,8 +57,10 @@ router.post("/daily-report/create", createDailyReport);
 router.get("/daily-report/:reportId", getReportById); 
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.get("/get/past-report/by/:projectId", getPastReportsByProject); 
+router.delete("/delete/daily-report/:reportId", deleteDailyReport);
 router.put("/daily-report/update/:reportId", updateDailyReport); // accepts form-data with reportId
 router.get("/get/all/delay-suggestions", delaySuggestion);
+router.put('/daily-log/status/:reportId', markProjectDailyLogStatus);
 
 // weeklyGoals
 router.post("/weekly-goal/create", createWeeklyGoal);

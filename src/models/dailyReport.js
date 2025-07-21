@@ -34,6 +34,11 @@ const dailyReportSchema = new mongoose.Schema(
       type: String,
     },
     photos: [String],
+     status: {
+      type: Number,
+      enum: [0, 1, 2], // 0 = submitted, 1 = approved, 2 = rejected
+      default: 0,
+    },
 
 
   },
