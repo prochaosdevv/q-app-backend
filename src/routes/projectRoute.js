@@ -11,7 +11,8 @@ import {
   markProjectReportAsSent,
   markProjectDailyLogStatus,
   archiveProject,
-  deleteProject
+  deleteProject,
+  editMultipleContributorPermissions
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
@@ -24,6 +25,9 @@ router.post("/create",verifyToken, createProject);
 
 // POST /api/add-contributor
 router.post("/add-contributors", addContributorsToProject);
+
+// POST /api/add-contributor
+router.put("/edit-contributors-permissions", editMultipleContributorPermissions);
 
 // GET /api/project
 router.get("/",verifyToken, getProjects);

@@ -159,6 +159,23 @@ export const addContributorsToProject = async (req, res) => {
       });
     }
 
+    // Step 1: Check for already added contributors
+    const contributorEmails = contributors.map((c) => c.email);
+    const existingContributors = await Contributor.find({
+      email: { $in: contributorEmails },
+      project: projectId,
+    });
+
+    if (existingContributors.length > 0) {
+      const alreadyAddedEmails = existingContributors.map((c) => c.email);
+      return res.status(400).json({
+        success: false,
+        message: "Some contributors are already added to this project.",
+        alreadyAddedEmails,
+      });
+    }
+
+    // Step 2: Add only new contributors
     await Promise.all(
       contributors.map(async (contributor) => {
         let referal = false;
@@ -166,7 +183,7 @@ export const addContributorsToProject = async (req, res) => {
 
         if (!user) {
           referal = true;
-             await sendInvitationEmail(contributor.email, project.name, project._id);
+          // await sendInvitationEmail(contributor.email, project.name, project._id);
         }
 
         await Contributor.create({
@@ -192,6 +209,56 @@ export const addContributorsToProject = async (req, res) => {
     });
   }
 };
+
+export const editMultipleContributorPermissions = async (req, res) => {
+  try {
+    const { projectId, contributors } = req.body;
+
+    if (!projectId || !Array.isArray(contributors) || contributors.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID and contributors array are required.",
+      });
+    }
+
+    const updated = [];
+    const newlyAdded = [];
+
+    await Promise.all(
+      contributors.map(async (contributor) => {
+        const { email, permission } = contributor;
+
+        if (!email || !permission) return;
+
+        const existing = await Contributor.findOne({ email, project: projectId });
+
+        if (!existing) {
+          newlyAdded.push(email);
+          return;
+        }
+
+        existing.permission = permission;
+        await existing.save();
+        updated.push(email);
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Permissions updated.",
+      updated,
+      newlyAdded,
+    });
+  } catch (error) {
+    console.error("Edit multiple contributor permissions error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
 
 
 export const getProjects = async (req, res) => {
