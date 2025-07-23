@@ -91,7 +91,7 @@ export const createProject = async (req, res) => {
             referal = true;
 
             // Send invitation email
-   await sendInvitationEmail(contributor.email, project.name, project._id);
+  //  await sendInvitationEmail(contributor.email, project.name, project._id);
 
           }
 
