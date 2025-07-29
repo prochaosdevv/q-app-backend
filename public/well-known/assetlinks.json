@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "com.q_app",
+      "package_name": "com.q_app",
+      "sha256_cert_fingerprints": [
+        "EE:17:5A:D1:49:E1:31:14:93:07:D0:C8:F7:CA:0E:5B:EA:62:3F:67:55:FA:9C:52:6F:60:25:20:85:32:9C:43"
+      ]
+    }
+  }
+]
