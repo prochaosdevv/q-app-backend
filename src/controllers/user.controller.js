@@ -7,6 +7,7 @@ import Otp from "../models/otp.js";
 import { sendEmail } from "./emailController.js";
 import AWS from "aws-sdk";
 import fs from "fs";
+import Contributor from "../models/contributor.js";
 
 dotenv.config();
 
@@ -20,12 +21,14 @@ const s3Client = new AWS.S3({
 const uploadToS3 = async (file) => {
   const fileContent = fs.readFileSync(file.filepath);
 
-  const upload = await s3Client.upload({
-    Bucket: process.env.IMAGE_BUCKET,
-    Key: `daily-reports/${Date.now()}-${file.originalFilename}`,
-    Body: fileContent,
-    ContentType: file.mimetype,
-  }).promise();
+  const upload = await s3Client
+    .upload({
+      Bucket: process.env.IMAGE_BUCKET,
+      Key: `daily-reports/${Date.now()}-${file.originalFilename}`,
+      Body: fileContent,
+      ContentType: file.mimetype,
+    })
+    .promise();
 
   return upload.Location;
 };
@@ -60,6 +63,14 @@ const registerUser = async (req, res) => {
       password: hashedPassword,
     });
 
+    const contributors = await Contributor.find({ email });
+
+    for (const contributor of contributors) {
+      contributor.userId = newUser._id;
+      contributor.status = 1; // signup
+      await contributor.save();
+    }
+
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email },
       process.env.JWT_SECRET,
@@ -75,6 +86,7 @@ const registerUser = async (req, res) => {
         fullname: newUser.fullname,
         email: newUser.email,
       },
+      contributor: contributor || null,
     });
   } catch (error) {
     console.error("User registration error:", error);
@@ -90,8 +102,8 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log(email,password);
-    
+    console.log(email, password);
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -131,6 +143,89 @@ const loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error("User login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error...!!",
+    });
+  }
+};
+
+// ADD new user
+const createNewUser = async (req, res) => {
+  try {
+    const { fullname, email, password, subscriptionPlan, accountStatus } =
+      req.body;
+
+    if (!fullname || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required...!!",
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered...!!",
+      });
+    }
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+      fullname,
+      email,
+      password: hashedPassword,
+      subscriptionPlan,
+      accountStatus,
+      sendWelcomeEmail: true,
+    });
+
+    // Send welcome email with credentials
+    await sendEmail(
+      email,
+      "Welcome to Quentessential – Your Login Credentials",
+      `Hello ${fullname},
+
+Welcome to Quentessential!
+
+Your account has been successfully created. Here are your login credentials:
+
+Email: ${email}
+Password: ${password}
+
+We recommend logging in and updating your password immediately for security reasons.
+
+Thank you for joining us!
+
+Best regards,  
+The Quentessential Team`,
+      `<p>Hello ${fullname},</p>
+      <p>Welcome to <strong>Quentessential</strong>! Your account has been successfully created.</p>
+      <p><strong>Login credentials:</strong></p>
+      <ul>
+        <li><strong>Email:</strong> ${email}</li>
+        <li><strong>Password:</strong> ${password}</li>
+      </ul>
+      <p>We highly recommend logging in and updating your password right away for security.</p>
+      <p>Thank you for joining us!</p>
+      <p>Best regards,<br/><strong>The Quentessential Team</strong></p>`,
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "User registered and welcome email sent!",
+      user: {
+        id: newUser._id,
+        fullname: newUser.fullname,
+        email: newUser.email,
+      },
+    });
+  } catch (error) {
+    console.error("User registration error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error...!!",
@@ -256,7 +351,7 @@ const getUserByEmail = async (req, res) => {
   }
 };
 
-// changePassword 
+// changePassword
 const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -320,16 +415,14 @@ const requestOtp = async (req, res) => {
       status: "pending",
     });
 
-    const otpToken = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "2m" }
-    );
+    const otpToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "2m",
+    });
 
-await sendEmail(
-  user.email,
-  "Your OTP for Password Reset",
-  `Hello,
+    await sendEmail(
+      user.email,
+      "Your OTP for Password Reset",
+      `Hello,
 
 We received a request to reset your password. Use the following OTP: ${otpCode}
 
@@ -337,14 +430,12 @@ This OTP is valid for 2 minutes. If you did not request this, please ignore this
 
 Thank you,
 The Quentessential Team`,
-  `<p>Hello,</p>
+      `<p>Hello,</p>
   <p>We received a request to reset your password. Please use the one-time password (OTP) below to proceed:</p>
   <p style="font-size: 16px; font-weight: bold;">${otpCode}</p>
   <p>This OTP is valid for <strong>2 minutes</strong>. If you did not request this, please ignore this email.</p>
-  <p>Thank you,<br/>The Quentessential Team</p>`
-);
-
-
+  <p>Thank you,<br/>The Quentessential Team</p>`,
+    );
 
     res.status(200).json({
       success: true,
@@ -399,8 +490,6 @@ const verifyOtp = async (req, res) => {
     });
   }
 };
-
-
 
 // 3️⃣ Reset Password
 const resetPassword = async (req, res) => {
@@ -468,7 +557,7 @@ const updateUserProfile = async (req, res) => {
         fullname,
         username,
         bio,
-        profileCompleted: true, 
+        profileCompleted: true,
       };
 
       if (files.image) {
@@ -476,11 +565,10 @@ const updateUserProfile = async (req, res) => {
         updateFields.image = imageUrl;
       }
 
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        updateFields,
-        { new: true, runValidators: true }
-      ).select("-password");
+      const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+        new: true,
+        runValidators: true,
+      }).select("-password");
 
       if (!updatedUser) {
         return res.status(404).json({
@@ -504,12 +592,16 @@ const updateUserProfile = async (req, res) => {
   });
 };
 
-
-
-
-
-
-
-export { registerUser, loginUser, getAllUsers, socialAuth,getUserByEmail,changePassword,requestOtp,
+export {
+  registerUser,
+  loginUser,
+  getAllUsers,
+  socialAuth,
+  getUserByEmail,
+  changePassword,
+  requestOtp,
   verifyOtp,
-  resetPassword,updateUserProfile };
+  resetPassword,
+  updateUserProfile,
+  createNewUser,
+};

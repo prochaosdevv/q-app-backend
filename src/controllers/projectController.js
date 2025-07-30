@@ -342,81 +342,113 @@ export const getProjectById = async (req, res) => {
 };
 
 
-export const signupContributor = async (req, res) => {
+// export const signupContributor = async (req, res) => {
+//   try {
+//     const { fullname, email, password, contributorId } = req.body;
+
+//     if (!fullname || !email || !password || !contributorId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "All fields are required...!!",
+//       });
+//     }
+
+//     let user = await User.findOne({ email });
+
+//     if (!user) {
+//       // Create new user
+//       const salt = await bcrypt.genSalt(10);
+//       const hashedPassword = await bcrypt.hash(password, salt);
+
+//       user = await User.create({
+//         fullname,
+//         email,
+//         password: hashedPassword,
+//       });
+//     }
+
+//     // Now update the contributor entry
+//     const contributor = await Contributor.findById(contributorId);
+//     if (!contributor) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Contributor invitation not found...!!",
+//       });
+//     }
+
+//     contributor.userId = user._id;
+//     contributor.status = 1; // signed up
+//     await contributor.save();
+
+//     // Issue token
+//     const token = jwt.sign(
+//       { userId: user._id, email: user.email },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "24h" },
+//     );
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Contributor signed up successfully...!!",
+//       token,
+//       user: {
+//         id: user._id,
+//         fullname: user.fullname,
+//         email: user.email,
+//       },
+//       contributor,
+//     });
+//   } catch (error) {
+//     console.error("Contributor signup error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error...!!",
+//     });
+//   }
+// };
+
+// getPendingInvitations
+export const getPendingInvitations = async (req, res) => {
   try {
-    const { fullname, email, password, contributorId } = req.body;
+    const userId = req.user.userId;
 
-    if (!fullname || !email || !password || !contributorId) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required...!!",
-      });
-    }
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      // Create new user
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      user = await User.create({
-        fullname,
-        email,
-        password: hashedPassword,
-      });
-    }
-
-    // Now update the contributor entry
-    const contributor = await Contributor.findById(contributorId);
-    if (!contributor) {
-      return res.status(404).json({
-        success: false,
-        message: "Contributor invitation not found...!!",
-      });
-    }
-
-    contributor.userId = user._id;
-    contributor.status = 1; // signed up
-    await contributor.save();
-
-    // Issue token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" },
-    );
-
-    res.status(201).json({
-      success: true,
-      message: "Contributor signed up successfully...!!",
-      token,
-      user: {
-        id: user._id,
-        fullname: user.fullname,
-        email: user.email,
-      },
-      contributor,
+    const invitations = await Contributor.find({
+      userId,
+      invitationStatus: 'pending',
+      referal: true,
     });
-  } catch (error) {
-    console.error("Contributor signup error:", error);
+
+    res.status(200).json({
+      success: true,
+      invitations,
+    });
+  } catch (err) {
+    console.error('Error fetching pending invitations:', err);
     res.status(500).json({
       success: false,
-      message: "Internal server error...!!",
+      message: 'Internal server error',
     });
   }
 };
 
+
 // Accept invitation
 export const acceptInvitation = async (req, res) => {
   try {
-    const { contributorId } = req.body;
+    const { projectId } = req.body;
 
-    const contributor = await Contributor.findById(contributorId);
+    const contributor = await Contributor.findOne({
+      userId: req.user.userId,
+      projectId,
+      invitationStatus: "pending",
+      referal: true,
+      status: 1,
+    });
+
     if (!contributor) {
       return res.status(404).json({
         success: false,
-        message: "Invitation not found.",
+        message: "No pending referral invitation found for this project.",
       });
     }
 
@@ -425,7 +457,7 @@ export const acceptInvitation = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Invitation accepted.",
+      message: "Referral invitation accepted.",
       contributor,
     });
   } catch (err) {
@@ -437,16 +469,27 @@ export const acceptInvitation = async (req, res) => {
   }
 };
 
+
+
+
+
 // Decline invitation
 export const declineInvitation = async (req, res) => {
   try {
-    const { contributorId } = req.body;
+    const { projectId } = req.body;
 
-    const contributor = await Contributor.findById(contributorId);
+    const contributor = await Contributor.findOne({
+      userId: req.user.userId,
+      projectId,
+      invitationStatus: "pending",
+      referal: true,
+      status: 1,
+    });
+
     if (!contributor) {
       return res.status(404).json({
         success: false,
-        message: "Invitation not found.",
+        message: "No pending referral invitation found for this project.",
       });
     }
 
@@ -455,7 +498,7 @@ export const declineInvitation = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Invitation declined.",
+      message: "Referral invitation declined.",
       contributor,
     });
   } catch (err) {
@@ -466,6 +509,10 @@ export const declineInvitation = async (req, res) => {
     });
   }
 };
+
+
+
+
 
 export const getContributorsByProject = async (req, res) => {
   try {

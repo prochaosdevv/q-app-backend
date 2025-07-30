@@ -44,6 +44,18 @@ const userSchema = new Schema(
     providerId: {
       type: String, // ID from Google/apple
     },
+    accountStatus: {
+      type: String,
+      default:"Active"
+    },
+    subscriptionPlan: {
+      type: String,
+      default:"Basic"
+    },
+    sendWelcomeEmail: {
+      type: Boolean,
+      default:false
+    },
   },
   {
     timestamps: true,

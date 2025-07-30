@@ -2,7 +2,7 @@ import express from "express";
 import {
   createProject,
   getProjects,
-  signupContributor,
+  // signupContributor,
   acceptInvitation,
   declineInvitation,
   getContributorsByProject,
@@ -12,7 +12,8 @@ import {
   markProjectDailyLogStatus,
   archiveProject,
   deleteProject,
-  editMultipleContributorPermissions
+  editMultipleContributorPermissions,
+  getPendingInvitations
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
@@ -46,13 +47,16 @@ router.put("/mark-sent/:projectId", markProjectReportAsSent);
 
 
 // POST /api/project/signup-contributor
-router.post("/signup-contributor", signupContributor);
+// router.post("/signup-contributor", signupContributor);
+
+// GET /api/pending-status
+router.get("/pending-status",verifyToken, getPendingInvitations);
 
 // POST /api/project/accept-invitation
-router.post("/accept-invitation", acceptInvitation);
+router.post("/accept-invitation",verifyToken, acceptInvitation);
 
 // POST /api/project/decline-invitation
-router.post("/decline-invitation", declineInvitation);
+router.post("/decline-invitation",verifyToken, declineInvitation);
 
 // GET /api/project/contributors/:projectId
 router.get("/contributors/:projectId", getContributorsByProject);
