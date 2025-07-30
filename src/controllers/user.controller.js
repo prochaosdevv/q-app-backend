@@ -151,6 +151,7 @@ const loginUser = async (req, res) => {
 };
 
 // ADD new user
+
 const createNewUser = async (req, res) => {
   try {
     const { fullname, email, password, subscriptionPlan, accountStatus } =
@@ -233,10 +234,75 @@ The Quentessential Team`,
   }
 };
 
+// edit user 
+const editNewUser = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { fullname, email, subscriptionPlan, accountStatus } = req.body;
+    console.log(id,fullname, email, subscriptionPlan, accountStatus);
+    
+
+    if (!fullname || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name and email are required.",
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Check if email is changed and already exists
+    if (user.email !== email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use by another user.",
+        });
+      }
+    }
+
+    
+    user.fullname = fullname;
+    user.email = email;
+    user.subscriptionPlan = subscriptionPlan || user.subscriptionPlan;
+    user.accountStatus = accountStatus || user.accountStatus;
+
+  
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully.",
+      user: {
+        id: user._id,
+        fullname: user.fullname,
+        email: user.email,
+        subscriptionPlan: user.subscriptionPlan,
+        accountStatus: user.accountStatus,
+      },
+    });
+  } catch (error) {
+    console.error("User update error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password"); // exclude password
+    const users = await User.find().select("-password").sort({ createdAt: -1 });;
     res.status(200).json({
       success: true,
       message: "Users fetched successfully...!!",
@@ -604,4 +670,5 @@ export {
   resetPassword,
   updateUserProfile,
   createNewUser,
+  editNewUser
 };

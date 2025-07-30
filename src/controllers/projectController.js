@@ -440,7 +440,7 @@ export const acceptInvitation = async (req, res) => {
 
     const contributor = await Contributor.findOne({
       userId: req.user.userId,
-      projectId,
+      project:projectId,
       invitationStatus: "pending",
       referal: true,
       status: 1,
@@ -481,7 +481,7 @@ export const declineInvitation = async (req, res) => {
 
     const contributor = await Contributor.findOne({
       userId: req.user.userId,
-      projectId,
+      project:projectId,
       invitationStatus: "pending",
       referal: true,
       status: 1,

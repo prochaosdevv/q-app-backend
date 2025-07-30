@@ -1,5 +1,5 @@
 import express from "express";
-import {changePassword, createNewUser, getAllUsers, getUserByEmail, loginUser, registerUser, requestOtp, resetPassword, socialAuth, updateUserProfile, verifyOtp } from "../controllers/user.controller.js";
+import {changePassword, createNewUser, editNewUser, getAllUsers, getUserByEmail, loginUser, registerUser, requestOtp, resetPassword, socialAuth, updateUserProfile, verifyOtp } from "../controllers/user.controller.js";
 import verifyToken from "../middleware/auth.js";
 
 const router = express.Router();
@@ -22,6 +22,7 @@ router.post("/reset-password", verifyToken, resetPassword);
 
 ///Admin 
 router.post("/create/user", createNewUser);
+router.put("/update/user/:id", editNewUser);
 
 
 
