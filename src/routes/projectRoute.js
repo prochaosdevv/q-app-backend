@@ -50,7 +50,7 @@ router.put("/mark-sent/:projectId", markProjectReportAsSent);
 // router.post("/signup-contributor", signupContributor);
 
 // GET /api/pending-status
-router.get("/pending-status",verifyToken, getPendingInvitations);
+router.get("/get/pending-status",verifyToken, getPendingInvitations);
 
 // POST /api/project/accept-invitation
 router.post("/accept-invitation",verifyToken, acceptInvitation);

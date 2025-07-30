@@ -411,6 +411,7 @@ export const getProjectById = async (req, res) => {
 export const getPendingInvitations = async (req, res) => {
   try {
     const userId = req.user.userId;
+// console.log(userId);
 
     const invitations = await Contributor.find({
       userId,
