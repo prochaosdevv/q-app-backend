@@ -240,7 +240,7 @@ const editNewUser = async (req, res) => {
   try {
     const { id } = req.params; 
     const { fullname, email, subscriptionPlan, accountStatus } = req.body;
-    console.log(id,fullname, email, subscriptionPlan, accountStatus);
+    // console.log(id,fullname, email, subscriptionPlan, accountStatus);
     
 
     if (!fullname || !email) {
@@ -317,6 +317,30 @@ const getAllUsers = async (req, res) => {
     });
   }
 };
+
+const getRecentUsers = async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const users = await User.find({ createdAt: { $gte: sevenDaysAgo } })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Recent users fetched successfully.",
+      users,
+    });
+  } catch (error) {
+    console.error("Error fetching recent users:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
 
 const socialAuth = async (req, res) => {
   try {
@@ -700,5 +724,6 @@ export {
   updateUserProfile,
   createNewUser,
   editNewUser,
-  deleteUserById
+  deleteUserById,
+  getRecentUsers
 };

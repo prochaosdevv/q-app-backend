@@ -1,5 +1,5 @@
 import express from "express";
-import {changePassword, createNewUser, deleteUserById, editNewUser, getAllUsers, getUserByEmail, loginUser, registerUser, requestOtp, resetPassword, socialAuth, updateUserProfile, verifyOtp } from "../controllers/user.controller.js";
+import {changePassword, getAllUsers, getUserByEmail, loginUser, registerUser, requestOtp, resetPassword, socialAuth, updateUserProfile, verifyOtp } from "../controllers/user.controller.js";
 import verifyToken from "../middleware/auth.js";
 
 const router = express.Router();
@@ -20,10 +20,6 @@ router.post("/reset-password", verifyToken, resetPassword);
 
 
 
-///Admin 
-router.post("/create/user", createNewUser);
-router.put("/update/user/:id", editNewUser);
-router.delete("/delete/by/:id", deleteUserById);
 
 
 
