@@ -65,6 +65,7 @@ const registerUser = async (req, res) => {
 
     const contributors = await Contributor.find({ email });
 
+
     for (const contributor of contributors) {
       contributor.userId = newUser._id;
       contributor.status = 1; // signup
@@ -86,7 +87,7 @@ const registerUser = async (req, res) => {
         fullname: newUser.fullname,
         email: newUser.email,
       },
-      contributor: contributor || null,
+      contributor: contributors || null,
     });
   } catch (error) {
     console.error("User registration error:", error);
@@ -658,6 +659,34 @@ const updateUserProfile = async (req, res) => {
   });
 };
 
+ const deleteUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully.",
+      deletedUser,
+    });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+
 export {
   registerUser,
   loginUser,
@@ -670,5 +699,6 @@ export {
   resetPassword,
   updateUserProfile,
   createNewUser,
-  editNewUser
+  editNewUser,
+  deleteUserById
 };
