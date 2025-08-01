@@ -84,7 +84,7 @@ export const getCurrentWeek = async (req, res) => {
 
 
     const formatDate = (d) => d.toISOString().split('T')[0];
-    const _startOfWeek = formatDate(startOfWeek);  // 2025-07-28
+    const _startOfWeek = formatDate(startOfWeek);
     const  _endOfWeek = formatDate(endOfWeek);  
     // console.log(startOfWeek,endOfWeek);
       const goal = await WeeklyGoal.findOne({
@@ -147,6 +147,34 @@ export const setCurrentWeekGoal = async (req, res) => {
 };
 
 
+export const getPastGoals = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const today = new Date();
+    const currentDay = today.getDay(); 
+   
+    const startOfWeek = new Date(today);
+    
+    startOfWeek.setDate(today.getDate() - (currentDay - 2));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const _startOfWeek = startOfWeek.toISOString().split("T")[0];
+
+    const pastGoals = await WeeklyGoal.find({
+      project: projectId,
+      startDate: { $lt: _startOfWeek }
+    }).sort({ startDate: -1 });
+
+    return res.status(200).json({
+      success: true,
+      pastGoals
+    });
+  } catch (error) {
+    console.error("Error fetching past weekly goals:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
 
 
 
