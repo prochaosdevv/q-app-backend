@@ -17,7 +17,7 @@ import {
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
-import { createWeeklyGoal, deleteWeeklyGoal, getDailyReportsByWeeklyGoal, getWeeklyGoalById, getWeeklyGoalsByProjectId, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
+import { createWeeklyGoal, deleteWeeklyGoal, getCurrentWeek, getDailyReportsByWeeklyGoal, getWeeklyGoalById, getWeeklyGoalsByProjectId, setCurrentWeekGoal, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
 
 const router = express.Router();
 
@@ -76,6 +76,8 @@ router.get("/weekly-goal/:id", getWeeklyGoalById);
 router.put("/weekly-goal/update/:id", updateWeeklyGoal);
 router.delete("/weekly-goal/:id", deleteWeeklyGoal);
 router.get("/weekly/goal/by/:projectId", getWeeklyGoalsByProjectId);
+router.get("/get/current/week/by/:projectId", getCurrentWeek);
+router.put("/set/weekly-goal/by/:projectId", setCurrentWeekGoal);
 router.get("/daily-report/by/weekly/goal/:weeklyGoalId", getDailyReportsByWeeklyGoal);
 
 export default router;
