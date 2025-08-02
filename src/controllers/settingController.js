@@ -49,11 +49,6 @@ export const getSettings = async (req, res) => {
 // Update
 export const updateSettings = async (req, res) => {
   try {
-    const existingSettings = await Setting.findOne();
-    if (!existingSettings) {
-      return res.status(404).json({ message: "Settings not found" });
-    }
-
     const {
       appName,
       appURL,
@@ -62,17 +57,26 @@ export const updateSettings = async (req, res) => {
       isUserAllowRegistration,
     } = req.body;
 
-    existingSettings.appName = appName;
-    existingSettings.appURL = appURL;
-    existingSettings.desc = desc;
-    existingSettings.isMaintenanceMode = isMaintenanceMode;
-    existingSettings.isUserAllowRegistration = isUserAllowRegistration;
-
-    const updated = await existingSettings.save();
+    const updatedSettings = await Setting.findOneAndUpdate(
+      {},
+      {
+        $set: {
+          appName,
+          appURL,
+          desc,
+          isMaintenanceMode,
+          isUserAllowRegistration,
+        },
+      },
+      {
+        new: true,    
+        upsert: true, 
+      }
+    );
 
     return res.status(200).json({
       message: "Settings updated successfully",
-      data: updated,
+      data: updatedSettings,
     });
   } catch (error) {
     console.error("Error updating settings:", error);
@@ -82,6 +86,7 @@ export const updateSettings = async (req, res) => {
     });
   }
 };
+
 
 // Update Notification Settings (Separate API)
 export const updateNotificationSettings = async (req, res) => {
@@ -94,7 +99,7 @@ export const updateNotificationSettings = async (req, res) => {
         ...(typeof isNotifyNewUser === 'boolean' && { isNotifyNewUser }),
         ...(typeof isNotifySubscriptionChange === 'boolean' && { isNotifySubscriptionChange }),
       },
-      { new: true }
+      { new: true,upsert: true, }
     );
 
     if (!updatedSetting) {
