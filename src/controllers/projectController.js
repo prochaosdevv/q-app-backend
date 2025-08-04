@@ -1,3 +1,4 @@
+import ExcelJS from 'exceljs';
 import AWS from "aws-sdk";
 import fs from "fs";
 import formidable from "formidable";
@@ -129,6 +130,7 @@ export const createProject = async (req, res) => {
         success: true,
         message: "Project created, invitations sent if needed.",
         project,
+        contributor:parsedContributors
       });
     } catch (error) {
       console.error("Project creation error:", error);
@@ -545,37 +547,152 @@ export const getContributorsByProject = async (req, res) => {
 };
 
 
-export const markProjectReportAsSent = async (req, res) => {
+export const exportProjectReport = async (req, res) => {
   try {
     const { projectId } = req.params;
+    const { startDate, endDate, reportType } = req.body;
 
-    const project = await Project.findByIdAndUpdate(
-      projectId,
-      { reportSent: true },
-      { new: true }
-    );
-
+    const project = await Project.findById(projectId).populate('createdBy');
     if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found.",
-      });
+      return res.status(404).json({ success: false, message: "Project not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Project marked as report sent.",
-      project,
-    });
+    const reports = await DailyReport.find({
+      project: projectId,
+      createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+    })
+      .populate('labour')
+      .populate('material')
+      .populate('plant')
+      .populate('weather');
+
+    if (reportType === 'excel') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Daily Reports');
+
+      const applyBorder = (row) => {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: '000000' } },
+            left: { style: 'thin', color: { argb: '000000' } },
+            bottom: { style: 'thin', color: { argb: '000000' } },
+            right: { style: 'thin', color: { argb: '000000' } },
+          };
+           cell.alignment = { horizontal: 'left' }; 
+        });
+      };
+
+      for (const report of reports) {
+        // ---- Details Section ----
+        const detailsTitle = worksheet.addRow(['Details']);
+        detailsTitle.font = { bold: true };
+
+        const detailRows = [
+          ['Project:', project.name],
+          ['Date:', new Date(report.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' })],
+          // ['Weather:', report.weather?.condition || ''],
+          ['User:', project.createdBy?.fullname || '']
+        ];
+        detailRows.forEach((data) => {
+          const row = worksheet.addRow(data);
+          row.getCell(1).alignment = { horizontal: 'left' };
+          row.getCell(2).alignment = { horizontal: 'left' };
+        });
+        worksheet.addRow([]);
+
+        // ---- Progress Section ----
+        const progressTitle = worksheet.addRow(['Progress']);
+        progressTitle.font = { bold: true };
+        worksheet.addRow([]);
+
+        const progressRows = [
+          ['Report', report.progressReport || ''],
+          ['Delays', report.delays || '']
+        ];
+        progressRows.forEach((data) => {
+          const row = worksheet.addRow(data);
+          row.getCell(1).alignment = { vertical: 'top' };
+          row.getCell(2).alignment = { vertical: 'top', wrapText: true };
+        });
+        worksheet.addRow([]);
+
+        // ---- Labour Section ----
+        const labourTitle = worksheet.addRow(['Labour']);
+        labourTitle.font = { bold: true };
+
+        const labourHeader = worksheet.addRow(['Name', 'Role']);
+        labourHeader.font = { bold: true };
+        applyBorder(labourHeader);
+
+        report.labour.forEach((l) => {
+          const row = worksheet.addRow([l.name, l.role]);
+          applyBorder(row);
+        });
+        worksheet.addRow([]);
+
+        // ---- Material Section ----
+        const materialTitle = worksheet.addRow(['Material']);
+        materialTitle.font = { bold: true };
+
+        const materialHeader = worksheet.addRow(['Type', 'Qty', 'Unit']);
+        materialHeader.font = { bold: true };
+        applyBorder(materialHeader);
+
+        report.material.forEach((m) => {
+          const row = worksheet.addRow([m.type, m.qty, m.unit]);
+          applyBorder(row);
+        });
+        worksheet.addRow([]);
+
+        // ---- Plant Section ----
+        const plantTitle = worksheet.addRow(['Plant']);
+        plantTitle.font = { bold: true };
+
+        const plantHeader = worksheet.addRow(['Description', 'Qty']);
+        plantHeader.font = { bold: true };
+        applyBorder(plantHeader);
+
+        report.plant.forEach((p) => {
+          const row = worksheet.addRow([p.desc, p.qty]);
+          applyBorder(row);
+        });
+
+        worksheet.addRow([]); // Separator Row
+      }
+
+      // Auto-fit column widths
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = maxLength + 5;
+      });
+
+      // Excel File Headers
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="Project-Report.xlsx"`);
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } else {
+      return res.status(400).json({ success: false, message: "PDF export not implemented yet." });
+    }
 
   } catch (error) {
-    console.error("Mark project report sent error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error.",
-    });
+    console.error("Export report error:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
+
+
+
 
 
 export const markProjectDailyLogStatus = async (req, res) => {

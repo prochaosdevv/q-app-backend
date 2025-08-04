@@ -8,12 +8,12 @@ import {
   getContributorsByProject,
   addContributorsToProject,
   getProjectById,
-  markProjectReportAsSent,
   markProjectDailyLogStatus,
   archiveProject,
   deleteProject,
   editMultipleContributorPermissions,
-  getPendingInvitations
+  getPendingInvitations,
+  exportProjectReport
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
@@ -42,7 +42,8 @@ router.delete("/delete/by/:projectId", verifyToken, deleteProject);
 
 // GET /api/project/by/id
 router.get("/:projectId", getProjectById);
-router.post("/mark-sent/:projectId", markProjectReportAsSent);
+router.post("/export-report/:projectId", exportProjectReport);
+// router.post("/mark-sent/:projectId", markProjectReportAsSent);
 
 
 

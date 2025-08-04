@@ -15,7 +15,7 @@ const dailyReportSchema = new mongoose.Schema(
       ref: "Weather",
     },
     delays: {
-      type: Number,
+      type: String,
       default: null,
     },
     labour: [
