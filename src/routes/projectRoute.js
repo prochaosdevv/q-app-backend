@@ -42,7 +42,7 @@ router.delete("/delete/by/:projectId", verifyToken, deleteProject);
 
 // GET /api/project/by/id
 router.get("/:projectId", getProjectById);
-router.put("/mark-sent/:projectId", markProjectReportAsSent);
+router.post("/mark-sent/:projectId", markProjectReportAsSent);
 
 
 

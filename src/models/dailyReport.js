@@ -30,13 +30,11 @@ const dailyReportSchema = new mongoose.Schema(
         ref: "Material",
       }
     ],
-    plant: {
-      type: String,
-    },
+   plant: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plant' }],
     photos: [String],
      status: {
       type: Number,
-      enum: [0, 1, 2], // 0 = submitted, 1 = approved, 2 = rejected
+      enum: [0, 1, 2], 
       default: 0,
     },
 

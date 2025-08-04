@@ -1,4 +1,3 @@
-
 import fs from "fs";
 import formidable from "formidable";
 import AWS from "aws-sdk";
@@ -8,6 +7,7 @@ import Project from "../models/project.js";
 import Labour from "../models/labour.js";
 import Material from "../models/material.js";
 import Weather from "../models/weather.js";
+import Plant from "../models/plant.js";
 
 const s3Client = new AWS.S3({
   secretAccessKey: process.env.ACCESS_KEY,
@@ -53,9 +53,7 @@ export const createDailyReport = async (req, res) => {
         weather,
       } = fields;
 
-      // Validate project
       const project = await Project.findById(projectId);
-      
       if (!project) {
         return res.status(404).json({
           success: false,
@@ -63,62 +61,45 @@ export const createDailyReport = async (req, res) => {
         });
       }
 
-      // Handle labour
+      // Handle Labour
       let labourIds = [];
       if (labour) {
-        let parsedLabour;
-        try {
-          parsedLabour = JSON.parse(labour);
-        } catch (jsonErr) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid JSON for labour.",
-          });
-        }
-
+        let parsedLabour = JSON.parse(labour);
         for (const l of parsedLabour) {
           const labourDoc = await Labour.create(l);
           labourIds.push(labourDoc._id);
         }
       }
 
-      // Handle material
+      // Handle Material
       let materialIds = [];
       if (material) {
-        let parsedMaterial;
-        try {
-          parsedMaterial = JSON.parse(material);
-        } catch (jsonErr) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid JSON for material.",
-          });
-        }
-
+        let parsedMaterial = JSON.parse(material);
         for (const m of parsedMaterial) {
           const materialDoc = await Material.create(m);
           materialIds.push(materialDoc._id);
         }
       }
 
-      // Handle weather
+      // Handle Plant
+      let plantIds = [];
+      if (plant) {
+        let parsedPlant = JSON.parse(plant);
+        for (const p of parsedPlant) {
+          const plantDoc = await Plant.create(p);
+          plantIds.push(plantDoc._id);
+        }
+      }
+
+      // Handle Weather
       let weatherId = null;
       if (weather) {
-        let parsedWeather;
-        try {
-          parsedWeather = JSON.parse(weather);
-        } catch (jsonErr) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid JSON for weather.",
-          });
-        }
-
+        let parsedWeather = JSON.parse(weather);
         const weatherDoc = await Weather.create(parsedWeather);
         weatherId = weatherDoc._id;
       }
 
-      // Handle images
+      // Handle Images
       let photoUrls = [];
       if (files.photos) {
         const photoFiles = Array.isArray(files.photos) ? files.photos : [files.photos];
@@ -128,12 +109,12 @@ export const createDailyReport = async (req, res) => {
         }
       }
 
-      // Create daily report
+      // Create Daily Report
       const report = await DailyReport.create({
         project: projectId,
         progressReport,
         delays,
-        plant,
+        plant: plantIds,
         labour: labourIds,
         material: materialIds,
         weather: weatherId,
@@ -156,7 +137,6 @@ export const createDailyReport = async (req, res) => {
   });
 };
 
-// update daily report
 export const updateDailyReport = async (req, res) => {
   const { reportId } = req.params;
   const form = new formidable.IncomingForm({ multiples: true });
@@ -182,14 +162,15 @@ export const updateDailyReport = async (req, res) => {
         });
       }
 
-      // Delete old labour, material, weather
+      // Delete old linked data
       await Labour.deleteMany({ _id: { $in: report.labour } });
       await Material.deleteMany({ _id: { $in: report.material } });
+      await Plant.deleteMany({ _id: { $in: report.plant } });
       if (report.weather) {
         await Weather.findByIdAndDelete(report.weather);
       }
 
-      // Recreate labour
+      // Recreate Labour
       let labourIds = [];
       if (labour) {
         let parsedLabour = JSON.parse(labour);
@@ -199,7 +180,7 @@ export const updateDailyReport = async (req, res) => {
         }
       }
 
-      // Recreate material
+      // Recreate Material
       let materialIds = [];
       if (material) {
         let parsedMaterial = JSON.parse(material);
@@ -209,7 +190,17 @@ export const updateDailyReport = async (req, res) => {
         }
       }
 
-      // Recreate weather
+      // Recreate Plant
+      let plantIds = [];
+      if (plant) {
+        let parsedPlant = JSON.parse(plant);
+        for (const p of parsedPlant) {
+          const plantDoc = await Plant.create(p);
+          plantIds.push(plantDoc._id);
+        }
+      }
+
+      // Recreate Weather
       let weatherId = null;
       if (weather) {
         let parsedWeather = JSON.parse(weather);
@@ -228,10 +219,10 @@ export const updateDailyReport = async (req, res) => {
         }
       }
 
-      // Update report
+      // Update Report Fields
       report.progressReport = progressReport;
       report.delays = delays;
-      report.plant = plant;
+      report.plant = plantIds;
       report.labour = labourIds;
       report.material = materialIds;
       report.weather = weatherId;
@@ -255,7 +246,6 @@ export const updateDailyReport = async (req, res) => {
   });
 };
 
-//delete report
 export const deleteDailyReport = async (req, res) => {
   try {
     const { reportId } = req.params;
@@ -271,6 +261,7 @@ export const deleteDailyReport = async (req, res) => {
     // Delete linked data
     await Labour.deleteMany({ _id: { $in: report.labour } });
     await Material.deleteMany({ _id: { $in: report.material } });
+    await Plant.deleteMany({ _id: { $in: report.plant } });
     if (report.weather) {
       await Weather.findByIdAndDelete(report.weather);
     }
@@ -291,7 +282,6 @@ export const deleteDailyReport = async (req, res) => {
   }
 };
 
-// Get reports by projectId
 export const getReportsByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -300,6 +290,7 @@ export const getReportsByProject = async (req, res) => {
       .populate("project")
       .populate("labour")
       .populate("material")
+      .populate("plant")
       .populate("weather")
       .sort({ date: -1 });
 
@@ -330,6 +321,7 @@ export const getPastReportsByProject = async (req, res) => {
       .populate("project")
       .populate("labour")
       .populate("material")
+      .populate("plant")
       .populate("weather")
       .sort({ date: -1 });
 
@@ -347,8 +339,6 @@ export const getPastReportsByProject = async (req, res) => {
   }
 };
 
-
-// Get reports by id
 export const getReportById = async (req, res) => {
   try {
     const { reportId } = req.params;
@@ -357,6 +347,7 @@ export const getReportById = async (req, res) => {
       .populate("project")
       .populate("labour")
       .populate("material")
+      .populate("plant")
       .populate("weather");
 
     if (!report) {
@@ -379,18 +370,17 @@ export const getReportById = async (req, res) => {
     });
   }
 };
-// delaySuggestion 
+
 export const delaySuggestion = async (req, res) => {
   try {
-   const uniqueDelays = await DailyReport.distinct("delays", {
+    const uniqueDelays = await DailyReport.distinct("delays", {
       delays: { $ne: null, $exists: true, $ne: "" },
     });
-
 
     res.status(200).json({
       success: true,
       message: "Unique delays fetched successfully.",
-      delays: uniqueDelays.sort((a, b) => a - b), // optional: sort numerically
+      delays: uniqueDelays.sort((a, b) => a - b),
     });
   } catch (error) {
     console.error("Error fetching delay suggestions:", error);
@@ -400,4 +390,3 @@ export const delaySuggestion = async (req, res) => {
     });
   }
 };
-
