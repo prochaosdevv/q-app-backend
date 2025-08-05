@@ -323,19 +323,29 @@ export const getReportsByProject = async (req, res) => {
 export const getPastReportsByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date and end date are required.",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Ensure end of day
 
     const reports = await DailyReport.find({
       project: projectId,
-      createdAt: { $lte: today },
+      createdAt: { $gte: start, $lte: end },
     })
       .populate("project")
       .populate("labour")
       .populate("material")
       .populate("plant")
       .populate("weather")
-      .sort({ date: -1 });
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -350,6 +360,7 @@ export const getPastReportsByProject = async (req, res) => {
     });
   }
 };
+
 
 export const getReportById = async (req, res) => {
   try {
