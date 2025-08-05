@@ -321,9 +321,11 @@ export const getReportsByProject = async (req, res) => {
 };
 
 export const getPastReportsByProject = async (req, res) => {
+  const { projectId } = req.params;
+  
+  const { startDate, endDate } = req.query;
+ 
   try {
-    const { projectId } = req.params;
-    const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
       return res.status(400).json({
