@@ -1,8 +1,6 @@
 import ExcelJS from 'exceljs';
 import AWS from "aws-sdk";
 import fs from "fs";
-import path from "path";
-import { v4 as uuidv4 } from 'uuid'; 
 import formidable from "formidable";
 import dotenv from "dotenv";
 import Project from "../models/project.js";
@@ -13,7 +11,6 @@ import WeeklyGoal from "../models/weeklyGoal.js";
 import DailyReport from "../models/dailyReport.js";
 import PDFDocument from 'pdfkit';
 import blobStream from 'blob-stream';
-import stream from 'stream';
 
 dotenv.config();
 
@@ -93,13 +90,13 @@ export const createProject = async (req, res) => {
           // Check if user exists
           const user = await User.findOne({ email: contributor.email });
 
-          if (!user) {
+          // if (!user) {
             referal = true;
 
             // Send invitation email
    await sendInvitationEmail(contributor.email, project.name, project._id);
 
-          }
+          // }
 
           await Contributor.create({
             email: contributor.email,
@@ -188,10 +185,10 @@ export const addContributorsToProject = async (req, res) => {
         let referal = false;
         const user = await User.findOne({ email: contributor.email });
 
-        if (!user) {
+        // if (!user) {
           referal = true;
           await sendInvitationEmail(contributor.email, project.name, project._id);
-        }
+        // }
 
         await Contributor.create({
           email: contributor.email,
@@ -554,68 +551,90 @@ export const getContributorsByProject = async (req, res) => {
 
 export const exportProjectReport = async (req, res) => {
   try {
-    const { projectId } = req.params;
-    const { startDate: inputStartDate, endDate: inputEndDate, reportType, dateType } = req.body;
+        const { projectId } = req.params;
+const { startDate: inputStartDate, endDate: inputEndDate, reportType, dateType } = req.body;
 
-    let startDate = null;
-    let endDate = null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+let startDate = null;
+let endDate = null;
 
-    // --- DateType Logic ---
-    if (dateType === "today") {
-      startDate = new Date(today);
-      endDate = new Date(today);
-      endDate.setHours(23, 59, 59, 999);
-    } else if (dateType === "yesterday") {
-      startDate = new Date(today);
-      startDate.setDate(startDate.getDate() - 1);
-      endDate = new Date(startDate);
-      endDate.setHours(23, 59, 59, 999);
-    } else if (dateType === "currentWeek") {
-      const dayOfWeek = today.getDay();
-      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() + diffToMonday);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(today);
-      endDate.setHours(23, 59, 59, 999);
-    } else if (dateType === "lastWeek") {
-      const dayOfWeek = today.getDay();
-      const diffToLastMonday = dayOfWeek === 0 ? -13 : -6 - (dayOfWeek - 1);
-      startDate = new Date(today);
-      startDate.setDate(today.getDate() + diffToLastMonday);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 6);
-      endDate.setHours(23, 59, 59, 999);
-    } else if (dateType === "custom") {
-      startDate = inputStartDate ? new Date(inputStartDate) : null;
-      endDate = inputEndDate ? new Date(inputEndDate) : null;
-      if (startDate) startDate.setHours(0, 0, 0, 0);
-      if (endDate) endDate.setHours(23, 59, 59, 999);
-    }
+const today = new Date();
+today.setHours(0, 0, 0, 0); // reset to start of today
 
-    const query = { project: projectId };
-    if (startDate && endDate) {
-      query.createdAt = { $gte: startDate, $lte: endDate };
-    }
-// console.log(startDate,endDate);
+if (dateType === "today") {
+  startDate = new Date(today);
+  endDate = new Date(today);
+  endDate.setHours(23, 59, 59, 999);
+}
 
-    const project = await Project.findById(projectId).populate('createdBy');
-    if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+else if (dateType === "yesterday") {
+  startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 1);
+  endDate = new Date(startDate);
+  endDate.setHours(23, 59, 59, 999);
+}
 
-    const reports = await DailyReport.find(query)
-      .populate('labour')
-      .populate('material')
-      .populate('plant')
-      .populate('weather');
+else if (dateType === "currentWeek") {
+  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
 
-    if (!reports || reports.length === 0) {
-      return res.status(404).json({ success: false, message: "No reports found for the selected date range." });
-    }
+  startDate = new Date(today);
+  startDate.setDate(today.getDate() + diffToMonday);
+  startDate.setHours(0, 0, 0, 0);
 
-    const fileKey = `project-reports/${uuidv4()}.${reportType === 'excel' ? 'xlsx' : 'pdf'}`;
+  endDate = new Date(today);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "lastWeek") {
+  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToLastMonday = dayOfWeek === 0 ? -13 : -6 - (dayOfWeek - 1);
+
+  startDate = new Date(today);
+  startDate.setDate(today.getDate() + diffToLastMonday);
+  startDate.setHours(0, 0, 0, 0);
+
+  endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "custom") {
+  startDate = inputStartDate ? new Date(inputStartDate) : null;
+  endDate = inputEndDate ? new Date(inputEndDate) : null;
+
+  if (startDate) startDate.setHours(0, 0, 0, 0);
+  if (endDate) endDate.setHours(23, 59, 59, 999);
+  // console.log(startDate,endDate,inputStartDate,inputEndDate);
+}
+
+else if (dateType === "all") {
+  startDate = null;
+  endDate = null;
+}
+
+// MongoDB Query Build
+const query = {
+  project: projectId
+};
+
+
+if (startDate && endDate) {
+  query.createdAt = { $gte: startDate, $lte: endDate };
+}
+
+const project = await Project.findById(projectId).populate('createdBy');
+if (!project) {
+  return res.status(404).json({ success: false, message: "Project not found" });
+}
+
+const reports = await DailyReport.find(query)
+  .populate('labour')
+  .populate('material')
+  .populate('plant')
+  .populate('weather');
+if (!reports || reports.length === 0) {
+  return res.status(404).json({ success: false, message: "No reports found for the selected date range." });
+}
 
     if (reportType === 'excel') {
       const workbook = new ExcelJS.Workbook();
@@ -624,153 +643,211 @@ export const exportProjectReport = async (req, res) => {
       const applyBorder = (row) => {
         row.eachCell({ includeEmpty: true }, (cell) => {
           cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' },
+            top: { style: 'thin', color: { argb: '000000' } },
+            left: { style: 'thin', color: { argb: '000000' } },
+            bottom: { style: 'thin', color: { argb: '000000' } },
+            right: { style: 'thin', color: { argb: '000000' } },
           };
-          cell.alignment = { horizontal: 'left' };
+           cell.alignment = { horizontal: 'left' }; 
         });
       };
 
       for (const report of reports) {
-        worksheet.addRow(['Details']).font = { bold: true };
-        [['Project:', project.name],
-         ['Date:', new Date(report.createdAt).toLocaleDateString('en-GB')],
-         ['User:', project.createdBy?.fullname || '']
-        ].forEach(data => worksheet.addRow(data));
+        // ---- Details Section ----
+        const detailsTitle = worksheet.addRow(['Details']);
+        detailsTitle.font = { bold: true };
 
+        const detailRows = [
+          ['Project:', project.name],
+          ['Date:', new Date(report.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' })],
+          // ['Weather:', report.weather?.condition || ''],
+          ['User:', project.createdBy?.fullname || '']
+        ];
+        detailRows.forEach((data) => {
+          const row = worksheet.addRow(data);
+          row.getCell(1).alignment = { horizontal: 'left' };
+          row.getCell(2).alignment = { horizontal: 'left' };
+        });
         worksheet.addRow([]);
-        worksheet.addRow(['Progress']).font = { bold: true };
-        [['Report', report.progressReport || ''],
-         ['Delays', report.delays || '']
-        ].forEach(data => worksheet.addRow(data));
+
+        // ---- Progress Section ----
+        const progressTitle = worksheet.addRow(['Progress']);
+        progressTitle.font = { bold: true };
         worksheet.addRow([]);
 
-        if (report.labour.length > 0) {
-          worksheet.addRow(['Labour']).font = { bold: true };
-          const labourHeader = worksheet.addRow(['Name', 'Role']);
-          labourHeader.font = { bold: true };
-          applyBorder(labourHeader);
-          report.labour.forEach(l => applyBorder(worksheet.addRow([l.name, l.role])));
-          worksheet.addRow([]);
-        }
+        const progressRows = [
+          ['Report', report.progressReport || ''],
+          ['Delays', report.delays || '']
+        ];
+        progressRows.forEach((data) => {
+          const row = worksheet.addRow(data);
+          row.getCell(1).alignment = { vertical: 'top' };
+          row.getCell(2).alignment = { vertical: 'top', wrapText: true };
+        });
+        worksheet.addRow([]);
 
-        if (report.material.length > 0) {
-          worksheet.addRow(['Material']).font = { bold: true };
-          const materialHeader = worksheet.addRow(['Type', 'Qty', 'Unit']);
-          materialHeader.font = { bold: true };
-          applyBorder(materialHeader);
-          report.material.forEach(m => applyBorder(worksheet.addRow([m.type, m.qty, m.unit])));
-          worksheet.addRow([]);
-        }
+        // ---- Labour Section ----
+        const labourTitle = worksheet.addRow(['Labour']);
+        labourTitle.font = { bold: true };
 
-        if (report.plant.length > 0) {
-          worksheet.addRow(['Plant']).font = { bold: true };
-          const plantHeader = worksheet.addRow(['Description', 'Qty']);
-          plantHeader.font = { bold: true };
-          applyBorder(plantHeader);
-          report.plant.forEach(p => applyBorder(worksheet.addRow([p.desc, p.qty])));
-          worksheet.addRow([]);
-        }
+        const labourHeader = worksheet.addRow(['Name', 'Role']);
+        labourHeader.font = { bold: true };
+        applyBorder(labourHeader);
+
+        report.labour.forEach((l) => {
+          const row = worksheet.addRow([l.name, l.role]);
+          applyBorder(row);
+        });
+        worksheet.addRow([]);
+
+        // ---- Material Section ----
+        const materialTitle = worksheet.addRow(['Material']);
+        materialTitle.font = { bold: true };
+
+        const materialHeader = worksheet.addRow(['Type', 'Qty', 'Unit']);
+        materialHeader.font = { bold: true };
+        applyBorder(materialHeader);
+
+        report.material.forEach((m) => {
+          const row = worksheet.addRow([m.type, m.qty, m.unit]);
+          applyBorder(row);
+        });
+        worksheet.addRow([]);
+
+        // ---- Plant Section ----
+        const plantTitle = worksheet.addRow(['Plant']);
+        plantTitle.font = { bold: true };
+
+        const plantHeader = worksheet.addRow(['Description', 'Qty']);
+        plantHeader.font = { bold: true };
+        applyBorder(plantHeader);
+
+        report.plant.forEach((p) => {
+          const row = worksheet.addRow([p.desc, p.qty]);
+          applyBorder(row);
+        });
+
+        worksheet.addRow([]); // Separator Row
       }
 
-      worksheet.columns.forEach(column => {
-        let maxLength = 10;
-        column.eachCell({ includeEmpty: true }, cell => {
-          const length = cell.value ? cell.value.toString().length : 10;
-          if (length > maxLength) maxLength = length;
+      // Auto-fit column widths
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
         });
         column.width = maxLength + 5;
       });
 
-      const buffer = await workbook.xlsx.writeBuffer();
-      await s3Client.putObject({
-        Bucket: process.env.IMAGE_BUCKET,
-        Key: fileKey,
-        Body: buffer,
-        ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      }).promise();
+      // Excel File Headers
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="Project-Report.xlsx"`);
 
-    } else if (reportType === 'pdf') {
-      const passThrough = new stream.PassThrough();
-      const uploadPromise = s3Client.upload({
-        Bucket: process.env.IMAGE_BUCKET,
-        Key: fileKey,
-        Body: passThrough,
-        ContentType: 'application/pdf',
-      }).promise();
+      await workbook.xlsx.write(res);
+      res.end();
+    } 
+    else if (reportType === 'pdf') {
+  const doc = new PDFDocument({ margin: 30, size: 'A4' });
 
-      const doc = new PDFDocument({ margin: 30, size: 'A4' });
-      doc.pipe(passThrough);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="Project-Report.pdf"`);
 
-      const colSpacing = 150;
-      for (const report of reports) {
-        doc.fontSize(14).text('Details', { underline: true }).moveDown(0.5);
-        doc.fontSize(10).text(`Project: ${project.name}`);
-        doc.text(`Date: ${new Date(report.createdAt).toLocaleDateString('en-GB')}`);
-        doc.text(`User: ${project.createdBy?.fullname || ''}`).moveDown();
+  doc.pipe(res);
 
-        doc.fontSize(14).text('Progress', { underline: true }).moveDown(0.5);
-        doc.fontSize(10).text(`Report: ${report.progressReport || ''}`);
-        doc.text(`Delays: ${report.delays || ''}`).moveDown();
+  const colSpacing = 150; // adjust as needed
 
-        let currentY = doc.y;
-        const startX = doc.x;
+  for (const report of reports) {
+    // ---- Details Section ----
+    doc.fontSize(14).text('Details', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Project: ${project.name}`);
+    doc.text(`Date: ${new Date(report.createdAt).toLocaleDateString('en-GB')}`);
+    doc.text(`User: ${project.createdBy?.fullname || ''}`);
+    doc.moveDown();
 
-        if (report.labour.length > 0) {
-          doc.fontSize(14).text('Labour', startX, currentY, { underline: true });
-          currentY = doc.y + 5;
-          doc.fontSize(10).text('Name', startX, currentY).text('Role', startX + colSpacing, currentY);
-          currentY = doc.y + 5;
-          report.labour.forEach(l => {
-            doc.text(l.name, startX, currentY).text(l.role, startX + colSpacing, currentY);
-            currentY += 15;
-          });
-          doc.moveDown();
-        }
+    // ---- Progress Section ----
+    doc.fontSize(14).text('Progress', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Report: ${report.progressReport || ''}`);
+    doc.text(`Delays: ${report.delays || ''}`);
+    doc.moveDown();
 
-        if (report.material.length > 0) {
-          doc.fontSize(14).text('Material', startX, currentY, { underline: true });
-          currentY = doc.y + 5;
-          doc.fontSize(10).text('Type', startX, currentY).text('Qty', startX + colSpacing, currentY).text('Unit', startX + colSpacing * 2, currentY);
-          currentY = doc.y + 5;
-          report.material.forEach(m => {
-            doc.text(m.type, startX, currentY).text(m.qty.toString(), startX + colSpacing, currentY).text(m.unit, startX + colSpacing * 2, currentY);
-            currentY += 15;
-          });
-          doc.moveDown();
-        }
+    const startX = doc.x;
+    let currentY = doc.y;
 
-        if (report.plant.length > 0) {
-          doc.fontSize(14).text('Plant', startX, currentY, { underline: true });
-          currentY = doc.y + 5;
-          doc.fontSize(10).text('Description', startX, currentY).text('Qty', startX + colSpacing, currentY);
-          currentY = doc.y + 5;
-          report.plant.forEach(p => {
-            doc.text(p.desc, startX, currentY).text(p.qty.toString(), startX + colSpacing, currentY);
-            currentY += 15;
-          });
-          doc.moveDown();
-        }
+    // ---- Labour Section ----
+    if (report.labour.length > 0) {
+      doc.fontSize(14).text('Labour', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
 
-        doc.addPage();
-      }
+      doc.fontSize(10)
+        .text('Name', startX, currentY)
+        .text('Role', startX + colSpacing, currentY);
 
-      doc.end();
-      await uploadPromise;
-    } else {
-      return res.status(400).json({ success: false, message: "Invalid reportType." });
+      currentY = doc.y + 5;
+
+      report.labour.forEach((l) => {
+        doc.text(l.name, startX, currentY)
+          .text(l.role, startX + colSpacing, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
     }
 
-    const fileUrl = s3Client.getSignedUrl('getObject', {
-      Bucket: process.env.IMAGE_BUCKET,
-      Key: fileKey,
-      Expires: 3600 // 1 hour expiry
-    });
+    // ---- Material Section ----
+    if (report.material.length > 0) {
+      doc.fontSize(14).text('Material', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
 
-    return res.status(200).json({ success: true, fileUrl });
+      doc.fontSize(10)
+        .text('Type', startX, currentY)
+        .text('Qty', startX + colSpacing, currentY)
+        .text('Unit', startX + colSpacing * 2, currentY);
 
+      currentY = doc.y + 5;
+
+      report.material.forEach((m) => {
+        doc.text(m.type, startX, currentY)
+          .text(m.qty.toString(), startX + colSpacing, currentY)
+          .text(m.unit, startX + colSpacing * 2, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
+    }
+
+    // ---- Plant Section ----
+    if (report.plant.length > 0) {
+      doc.fontSize(14).text('Plant', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
+
+      doc.fontSize(10)
+        .text('Description', startX, currentY)
+        .text('Qty', startX + colSpacing, currentY);
+
+      currentY = doc.y + 5;
+
+      report.plant.forEach((p) => {
+        doc.text(p.desc, startX, currentY)
+          .text(p.qty.toString(), startX + colSpacing, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
+    }
+
+    doc.addPage(); // Add new page for next report
+  }
+
+  doc.end();
+}
+ else {
+      return res.status(400).json({ success: false, message: "Invalid reportType." });
+    }
   } catch (error) {
     console.error("Export report error:", error);
     res.status(500).json({ success: false, message: "Internal server error." });

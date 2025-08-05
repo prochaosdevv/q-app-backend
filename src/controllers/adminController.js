@@ -41,10 +41,14 @@ export const registerAdmin = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const expiryDate = new Date();
+    expiryDate.setMonth(expiryDate.getMonth() + 1);
+
     const newAdmin = new Admin({
       fullname,
       email,
       password: hashedPassword,
+      subscriptionExpirydate: expiryDate,
     
     });
 
