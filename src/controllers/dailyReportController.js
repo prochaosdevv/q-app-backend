@@ -285,8 +285,20 @@ export const deleteDailyReport = async (req, res) => {
 export const getReportsByProject = async (req, res) => {
   try {
     const { projectId } = req.params;
+    const today = new Date();
 
-    const reports = await DailyReport.find({ project: projectId })
+    const day = today.getDay();
+    
+    const startDate = new Date(today - (day-2)*1000*60*60*24)
+    const startOfWeek = new Date(startDate);
+    startOfWeek.setDate((startDate).getDate());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 5);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const reports = await DailyReport.find({ project: projectId,createdAt: { $gte: startOfWeek, $lte: endOfWeek }, })
       .populate("project")
       .populate("labour")
       .populate("material")
