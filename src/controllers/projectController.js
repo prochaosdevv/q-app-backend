@@ -9,6 +9,8 @@ import User from "../models/user.model.js";
 import { sendEmail, sendInvitationEmail } from "./emailController.js";
 import WeeklyGoal from "../models/weeklyGoal.js";
 import DailyReport from "../models/dailyReport.js";
+import PDFDocument from 'pdfkit';
+import blobStream from 'blob-stream';
 
 dotenv.config();
 
@@ -549,22 +551,91 @@ export const getContributorsByProject = async (req, res) => {
 
 export const exportProjectReport = async (req, res) => {
   try {
-    const { projectId } = req.params;
-    const { startDate, endDate, reportType } = req.body;
+        const { projectId } = req.params;
+const { startDate: inputStartDate, endDate: inputEndDate, reportType, dateType } = req.body;
 
-    const project = await Project.findById(projectId).populate('createdBy');
-    if (!project) {
-      return res.status(404).json({ success: false, message: "Project not found" });
-    }
+let startDate = null;
+let endDate = null;
 
-    const reports = await DailyReport.find({
-      project: projectId,
-      createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
-    })
-      .populate('labour')
-      .populate('material')
-      .populate('plant')
-      .populate('weather');
+const today = new Date();
+today.setHours(0, 0, 0, 0); // reset to start of today
+
+if (dateType === "today") {
+  startDate = new Date(today);
+  endDate = new Date(today);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "yesterday") {
+  startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 1);
+  endDate = new Date(startDate);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "currentWeek") {
+  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  startDate = new Date(today);
+  startDate.setDate(today.getDate() + diffToMonday);
+  startDate.setHours(0, 0, 0, 0);
+
+  endDate = new Date(today);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "lastWeek") {
+  const dayOfWeek = today.getDay(); // 0 (Sun) - 6 (Sat)
+  const diffToLastMonday = dayOfWeek === 0 ? -13 : -6 - (dayOfWeek - 1);
+
+  startDate = new Date(today);
+  startDate.setDate(today.getDate() + diffToLastMonday);
+  startDate.setHours(0, 0, 0, 0);
+
+  endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
+  endDate.setHours(23, 59, 59, 999);
+}
+
+else if (dateType === "custom") {
+  startDate = inputStartDate ? new Date(inputStartDate) : null;
+  endDate = inputEndDate ? new Date(inputEndDate) : null;
+
+  if (startDate) startDate.setHours(0, 0, 0, 0);
+  if (endDate) endDate.setHours(23, 59, 59, 999);
+  // console.log(startDate,endDate,inputStartDate,inputEndDate);
+}
+
+else if (dateType === "all") {
+  startDate = null;
+  endDate = null;
+}
+
+// MongoDB Query Build
+const query = {
+  project: projectId
+};
+
+
+if (startDate && endDate) {
+  query.createdAt = { $gte: startDate, $lte: endDate };
+}
+
+const project = await Project.findById(projectId).populate('createdBy');
+if (!project) {
+  return res.status(404).json({ success: false, message: "Project not found" });
+}
+
+const reports = await DailyReport.find(query)
+  .populate('labour')
+  .populate('material')
+  .populate('plant')
+  .populate('weather');
+  
+if (!reports || reports.length === 0) {
+  return res.status(404).json({ success: false, message: "No reports found for the selected date range." });
+}
 
     if (reportType === 'excel') {
       const workbook = new ExcelJS.Workbook();
@@ -681,10 +752,103 @@ export const exportProjectReport = async (req, res) => {
 
       await workbook.xlsx.write(res);
       res.end();
-    } else {
-      return res.status(400).json({ success: false, message: "PDF export not implemented yet." });
+    } 
+    else if (reportType === 'pdf') {
+  const doc = new PDFDocument({ margin: 30, size: 'A4' });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="Project-Report.pdf"`);
+
+  doc.pipe(res);
+
+  const colSpacing = 150; // adjust as needed
+
+  for (const report of reports) {
+    // ---- Details Section ----
+    doc.fontSize(14).text('Details', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Project: ${project.name}`);
+    doc.text(`Date: ${new Date(report.createdAt).toLocaleDateString('en-GB')}`);
+    doc.text(`User: ${project.createdBy?.fullname || ''}`);
+    doc.moveDown();
+
+    // ---- Progress Section ----
+    doc.fontSize(14).text('Progress', { underline: true });
+    doc.moveDown(0.5);
+    doc.fontSize(10).text(`Report: ${report.progressReport || ''}`);
+    doc.text(`Delays: ${report.delays || ''}`);
+    doc.moveDown();
+
+    const startX = doc.x;
+    let currentY = doc.y;
+
+    // ---- Labour Section ----
+    if (report.labour.length > 0) {
+      doc.fontSize(14).text('Labour', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
+
+      doc.fontSize(10)
+        .text('Name', startX, currentY)
+        .text('Role', startX + colSpacing, currentY);
+
+      currentY = doc.y + 5;
+
+      report.labour.forEach((l) => {
+        doc.text(l.name, startX, currentY)
+          .text(l.role, startX + colSpacing, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
     }
 
+    // ---- Material Section ----
+    if (report.material.length > 0) {
+      doc.fontSize(14).text('Material', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
+
+      doc.fontSize(10)
+        .text('Type', startX, currentY)
+        .text('Qty', startX + colSpacing, currentY)
+        .text('Unit', startX + colSpacing * 2, currentY);
+
+      currentY = doc.y + 5;
+
+      report.material.forEach((m) => {
+        doc.text(m.type, startX, currentY)
+          .text(m.qty.toString(), startX + colSpacing, currentY)
+          .text(m.unit, startX + colSpacing * 2, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
+    }
+
+    // ---- Plant Section ----
+    if (report.plant.length > 0) {
+      doc.fontSize(14).text('Plant', startX, currentY, { underline: true });
+      currentY = doc.y + 5;
+
+      doc.fontSize(10)
+        .text('Description', startX, currentY)
+        .text('Qty', startX + colSpacing, currentY);
+
+      currentY = doc.y + 5;
+
+      report.plant.forEach((p) => {
+        doc.text(p.desc, startX, currentY)
+          .text(p.qty.toString(), startX + colSpacing, currentY);
+        currentY += 15;
+      });
+      doc.moveDown();
+    }
+
+    doc.addPage(); // Add new page for next report
+  }
+
+  doc.end();
+}
+ else {
+      return res.status(400).json({ success: false, message: "Invalid reportType." });
+    }
   } catch (error) {
     console.error("Export report error:", error);
     res.status(500).json({ success: false, message: "Internal server error." });
