@@ -24,10 +24,12 @@ const transactionSchema = new mongoose.Schema(
       type: String,
     },
     subscriptionPlan: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubscriptionPlan",
-      required: true,
+     type: String,
     },
+    invoiceBuffer: {
+     type: String,
+    },
+    
   },
   {
     timestamps: true,

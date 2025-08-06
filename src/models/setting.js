@@ -14,6 +14,9 @@ const settingSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    address: {
+      type: String,
+    },
     isMaintenanceMode: {
       type: Boolean,
       default: false,

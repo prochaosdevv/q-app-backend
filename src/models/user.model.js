@@ -56,9 +56,6 @@ const userSchema = new Schema(
       type: Boolean,
       default:false
     },
-    subscriptionPlan: {
-       type: String,
-    },
      subscriptionExpirydate: {
     type: Date,
   },

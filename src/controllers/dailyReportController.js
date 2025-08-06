@@ -150,7 +150,6 @@ export const updateDailyReport = async (req, res) => {
         message: "Form parsing error: " + err.message,
       });
     }
-
     try {
       const { progressReport, delays, plant, labour, material, weather } = fields;
 
@@ -322,22 +321,17 @@ export const getReportsByProject = async (req, res) => {
 
 export const getPastReportsByProject = async (req, res) => {
   const { projectId } = req.params;
-  
   const { startDate, endDate } = req.query;
- 
   try {
-
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
         message: "Start date and end date are required.",
       });
     }
-
     const start = new Date(startDate);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Ensure end of day
-
+    end.setHours(23, 59, 59, 999);
     const reports = await DailyReport.find({
       project: projectId,
       createdAt: { $gte: start, $lte: end },
@@ -348,8 +342,7 @@ export const getPastReportsByProject = async (req, res) => {
       .populate("plant")
       .populate("weather")
       .sort({ createdAt: -1 });
-
-    res.status(200).json({
+      res.status(200).json({
       success: true,
       message: "Past reports fetched successfully.",
       reports,
@@ -367,14 +360,12 @@ export const getPastReportsByProject = async (req, res) => {
 export const getReportById = async (req, res) => {
   try {
     const { reportId } = req.params;
-
     const report = await DailyReport.findById(reportId)
       .populate("project")
       .populate("labour")
       .populate("material")
       .populate("plant")
-      .populate("weather");
-
+      .populate("weather")
     if (!report) {
       return res.status(404).json({
         success: false,
@@ -395,6 +386,7 @@ export const getReportById = async (req, res) => {
     });
   }
 };
+
 
 export const delaySuggestion = async (req, res) => {
   try {

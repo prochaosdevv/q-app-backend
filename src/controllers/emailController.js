@@ -49,3 +49,30 @@ ${inviteLink}`,
     `,
   );
 }
+
+export const sendInvoiceEmail = async (to, subject, text, html, invoiceBuffer) => {
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail', // Or SMTP settings
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: '"Quentessential" <no-reply@quentessential.com>',
+    to,
+    subject,
+    text,
+    html,
+    attachments: [
+      {
+        filename: 'Invoice.pdf',
+        content: invoiceBuffer, // Attach Buffer Directly
+        contentType: 'application/pdf',
+      },
+    ],
+  };
+
+  await transporter.sendMail(mailOptions);
+};
