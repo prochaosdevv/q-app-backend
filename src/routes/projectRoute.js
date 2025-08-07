@@ -17,7 +17,7 @@ import {
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
-import { createWeeklyGoal, deleteWeeklyGoal, getCurrentWeek, getDailyReportsByWeeklyGoal, getPastGoals, getWeeklyGoalById, getWeeklyGoalsByProjectId, setCurrentWeekGoal, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
+import { createWeeklyGoal, deleteWeeklyGoal, getCurrentWeek, getDailyReportsByWeeklyGoal, getGoalsByProjectAndDate, getPastGoals, getWeeklyGoalById, getWeeklyGoalsByProjectId, setCurrentWeekGoal, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
 
 const router = express.Router();
 
@@ -67,6 +67,7 @@ router.get("/daily-report/:reportId", getReportById);
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.get("/get/past-report/by/:projectId", getPastReportsByProject); 
 router.get("/get/past-goals/by/:projectId", getPastGoals); 
+router.get("/get/goal/by/dates/:projectId", getGoalsByProjectAndDate); 
 router.delete("/delete/daily-report/:reportId", deleteDailyReport);
 router.put("/daily-report/update/:reportId", updateDailyReport); // accepts form-data with reportId
 router.get("/get/all/delay-suggestions", delaySuggestion);

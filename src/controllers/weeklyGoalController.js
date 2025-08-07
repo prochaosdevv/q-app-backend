@@ -1,6 +1,6 @@
 import DailyReport from "../models/dailyReport.js";
+import Project from "../models/project.js";
 import WeeklyGoal from "../models/weeklyGoal.js";
-
 
 // CREATE Weekly Goal
 export const createWeeklyGoal = async (req, res) => {
@@ -17,7 +17,7 @@ export const createWeeklyGoal = async (req, res) => {
     // Validate each goal
     const invalidGoal = goals.find(
       (goal) =>
-        !goal.title || !goal.description || !goal.startDate || !goal.endDate
+        !goal.title || !goal.description || !goal.startDate || !goal.endDate,
     );
 
     if (invalidGoal) {
@@ -47,7 +47,6 @@ export const createWeeklyGoal = async (req, res) => {
   }
 };
 
-
 // READ Weekly Goal by ID
 export const getWeeklyGoalById = async (req, res) => {
   try {
@@ -55,7 +54,9 @@ export const getWeeklyGoalById = async (req, res) => {
 
     const goal = await WeeklyGoal.findById(id);
     if (!goal) {
-      return res.status(404).json({ success: false, message: "Goal not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Goal not found." });
     }
 
     res.status(200).json({ success: true, goal });
@@ -65,37 +66,34 @@ export const getWeeklyGoalById = async (req, res) => {
   }
 };
 
-
 export const getCurrentWeek = async (req, res) => {
   try {
-    const {projectId}=req.params
+    const { projectId } = req.params;
     const today = new Date();
 
     const day = today.getDay();
-    
-    const startDate = new Date(today - (day-2)*1000*60*60*24)
+
+    const startDate = new Date(today - (day - 2) * 1000 * 60 * 60 * 24);
     const startOfWeek = new Date(startDate);
-    startOfWeek.setDate((startDate).getDate());
+    startOfWeek.setDate(startDate.getDate());
     startOfWeek.setHours(0, 0, 0, 0);
 
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 5);
     endOfWeek.setHours(23, 59, 59, 999);
 
-
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = (d) => d.toISOString().split("T")[0];
     const _startOfWeek = formatDate(startOfWeek);
-    const  _endOfWeek = formatDate(endOfWeek);  
+    const _endOfWeek = formatDate(endOfWeek);
     // console.log(startOfWeek,endOfWeek);
-      const goal = await WeeklyGoal.findOne({
+    const goal = await WeeklyGoal.findOne({
       startDate: _startOfWeek,
       endDate: _endOfWeek,
-      project:projectId
+      project: projectId,
     });
     return res.status(200).json({
       success: true,
-      goal
-
+      goal,
     });
   } catch (error) {
     console.error("Error calculating week range:", error);
@@ -103,42 +101,45 @@ export const getCurrentWeek = async (req, res) => {
   }
 };
 
-
 export const setCurrentWeekGoal = async (req, res) => {
   try {
-    const {projectId}=req.params
-    const {title,description}=req.body
+    const { projectId } = req.params;
+    const { title, description } = req.body;
     const today = new Date();
 
     const day = today.getDay();
-    
-    const startDate = new Date(today - (day-2)*1000*60*60*24)
+
+    const startDate = new Date(today - (day - 2) * 1000 * 60 * 60 * 24);
     const startOfWeek = new Date(startDate);
-    startOfWeek.setDate((startDate).getDate());
+    startOfWeek.setDate(startDate.getDate());
     startOfWeek.setHours(0, 0, 0, 0);
 
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 5);
     endOfWeek.setHours(23, 59, 59, 999);
 
-
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    const _startOfWeek = formatDate(startOfWeek);  // 2025-07-28
-    const  _endOfWeek = formatDate(endOfWeek);  
+    const formatDate = (d) => d.toISOString().split("T")[0];
+    const _startOfWeek = formatDate(startOfWeek); // 2025-07-28
+    const _endOfWeek = formatDate(endOfWeek);
     // console.log(startOfWeek,endOfWeek);
-      const goal = await WeeklyGoal.updateOne({
-      startDate: _startOfWeek,
-      endDate: _endOfWeek,
-      project:projectId
-    },{$set:{
-      title:title,
-      description:description
-    }}, { upsert: true });
+    const goal = await WeeklyGoal.updateOne(
+      {
+        startDate: _startOfWeek,
+        endDate: _endOfWeek,
+        project: projectId,
+      },
+      {
+        $set: {
+          title: title,
+          description: description,
+        },
+      },
+      { upsert: true },
+    );
 
     return res.status(200).json({
       success: true,
-      goal
-
+      goal,
     });
   } catch (error) {
     console.error("Error updating weekly goal:", error);
@@ -146,38 +147,134 @@ export const setCurrentWeekGoal = async (req, res) => {
   }
 };
 
-
 export const getPastGoals = async (req, res) => {
   try {
     const { projectId } = req.params;
 
     const today = new Date();
-    const currentDay = today.getDay(); 
-   
+    const currentDay = today.getDay();
+
     const startOfWeek = new Date(today);
-    
     startOfWeek.setDate(today.getDate() - (currentDay - 2));
     startOfWeek.setHours(0, 0, 0, 0);
-    
-    const _startOfWeek = startOfWeek.toISOString().split("T")[0];
 
-    const pastGoals = await WeeklyGoal.find({
-      project: projectId,
-      startDate: { $lt: _startOfWeek }
-    }).sort({ startDate: -1 });
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found." });
+    }
+
+    const projectCreatedAt = new Date(project.createdAt);
+
+    const lastReport = await DailyReport.findOne({ project: projectId }).sort({
+      createdAt: -1,
+    });
+
+    if (!lastReport) {
+      return res.status(200).json({
+        success: true,
+        pastGoals: [],
+        message: "No reports found. Cannot calculate past goals.",
+      });
+    }
+
+    const lastReportDate = new Date(lastReport.createdAt);
+    if (lastReportDate >= startOfWeek) {
+      return res.status(200).json({
+        success: true,
+        pastGoals: [],
+        message: "Last report is in the current week. No past goals shown.",
+      });
+    }
+
+    console.log(lastReportDate, startOfWeek, projectCreatedAt);
+
+    // const pastGoals = await WeeklyGoal.find({
+    //   project: projectId,
+    //   startDate: {
+    //     $gte: projectCreatedAt,
+    //     $lte: lastReportDate,
+    //   },
+    // }).sort({ startDate: -1 });
+    const firstWeekStart = new Date(projectCreatedAt);
+
+    console.log(new Date() - firstWeekStart);
+    const totalWeeks = Math.ceil(
+      (new Date() - firstWeekStart) / (1000 * 60 * 60 * 24 * 7),
+    );
+
+    const firstWeekDay = firstWeekStart.getDay();
+    firstWeekStart.setDate(projectCreatedAt.getDate() - (firstWeekDay - 2));
+    firstWeekStart.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(firstWeekStart);
+    endOfWeek.setDate(firstWeekStart.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    console.log(totalWeeks);
+    // let pastGoals = [];
+    // for(let i = 0; i < totalWeeks; i++){
+    //   const startDate = firstWeekStart + i * 1000 * 60 * 60 * 24 * 7 ;
+    //   const endDate = endOfWeek + i * 1000 * 60 * 60 * 24 * 7 ;
+    //     pastGoals.push({
+    //       startDate,
+    //       endDate
+    //     })
+    // }
+    const formatDate = (d) => d.toISOString().split("T")[0];
+
+    let pastGoals = [];
+
+    for (let i = 0; i < totalWeeks; i++) {
+      const weekStart = new Date(firstWeekStart);
+      weekStart.setDate(weekStart.getDate() + i * 7);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 5);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      pastGoals.push({
+        startDate: formatDate(weekStart),
+        endDate: formatDate(weekEnd),
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      pastGoals
+      pastGoals,
     });
   } catch (error) {
     console.error("Error fetching past weekly goals:", error);
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
+export const getGoalsByProjectAndDate = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { startDate, endDate } = req.query;
+    console.log(startDate,endDate);
+    
 
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Start date and end date are required." });
+    }
 
+    const goals = await WeeklyGoal.findOne({
+      project: projectId,
+   startDate: startDate,
+  endDate: endDate,
+    }).sort({ startDate: 1 });
 
+    return res.status(200).json({
+      success: true,
+      goals,
+    });
+  } catch (error) {
+    console.error("Error fetching goals:", error);
+    res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
 
 
 // UPDATE Weekly Goal
@@ -189,11 +286,13 @@ export const updateWeeklyGoal = async (req, res) => {
     const updatedGoal = await WeeklyGoal.findByIdAndUpdate(
       id,
       { title, description, startDate, endDate },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedGoal) {
-      return res.status(404).json({ success: false, message: "Goal not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Goal not found." });
     }
 
     res.status(200).json({
@@ -215,7 +314,9 @@ export const deleteWeeklyGoal = async (req, res) => {
     const deletedGoal = await WeeklyGoal.findByIdAndDelete(id);
 
     if (!deletedGoal) {
-      return res.status(404).json({ success: false, message: "Goal not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Goal not found." });
     }
 
     res.status(200).json({
@@ -228,7 +329,6 @@ export const deleteWeeklyGoal = async (req, res) => {
   }
 };
 
-
 export const getWeeklyGoalsByProjectId = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -240,8 +340,9 @@ export const getWeeklyGoalsByProjectId = async (req, res) => {
       });
     }
 
-    const weeklyGoals = await WeeklyGoal.find({ project: projectId })
-      .sort({ startDate: 1 });
+    const weeklyGoals = await WeeklyGoal.find({ project: projectId }).sort({
+      startDate: 1,
+    });
 
     res.status(200).json({
       success: true,
@@ -255,8 +356,6 @@ export const getWeeklyGoalsByProjectId = async (req, res) => {
     });
   }
 };
-
-
 
 export const getDailyReportsByWeeklyGoal = async (req, res) => {
   try {
@@ -294,4 +393,3 @@ export const getDailyReportsByWeeklyGoal = async (req, res) => {
     });
   }
 };
-
