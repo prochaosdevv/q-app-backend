@@ -13,7 +13,8 @@ import {
   deleteProject,
   editMultipleContributorPermissions,
   getPendingInvitations,
-  exportProjectReport
+  exportProjectReport,
+  getUserProjects
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
 import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
@@ -32,6 +33,7 @@ router.put("/edit-contributors-permissions", editMultipleContributorPermissions)
 
 // GET /api/project
 router.get("/",verifyToken, getProjects);
+router.get("/get/by/user",verifyToken, getUserProjects);
 
 // Route to archive a project (status: 2 = archived)
 router.put("/archive/by/:projectId", verifyToken, archiveProject);

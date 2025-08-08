@@ -303,6 +303,58 @@ export const getProjects = async (req, res) => {
   }
 };
 
+export const getUserProjects = async (req, res) => {
+  try {
+   const userId = req.user.userId;
+    // Step 1: Get project IDs where the user is a contributor
+    const contributedProjects = await Contributor.find({ userId })
+      .select("project")
+      .lean();
+
+    const contributedProjectIds = contributedProjects.map(c => c.project);
+
+    // Step 2: Find all projects where the user is creator OR contributor
+    const projects = await Project.find({
+      $or: [
+        { createdBy: userId },
+        { _id: { $in: contributedProjectIds } }
+      ]
+    })
+      .populate("createdBy", "fullname email bio image provider")
+      .sort({ createdAt: -1 });
+
+    // Step 3: Add contributors & weekly goals to each project
+    const projectsWithDetails = await Promise.all(
+      projects.map(async (project) => {
+        const contributors = await Contributor.find({
+          project: project._id,
+        }).populate("userId", "fullname email image");
+
+        const weeklyGoals = await WeeklyGoal.find({
+          project: project._id,
+        }).sort({ startDate: 1 });
+
+        return {
+          ...project.toObject(),
+          contributors,
+          weeklyGoals,
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "User-specific projects fetched successfully.",
+      projects: projectsWithDetails,
+    });
+  } catch (error) {
+    console.error("Fetching user projects error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
 
 export const getProjectById = async (req, res) => {
   try {
