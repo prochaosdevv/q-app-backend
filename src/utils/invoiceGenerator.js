@@ -5,7 +5,7 @@ export const createInvoicePDFBuffer = async (invoiceData) => {
   const page = pdfDoc.addPage([595, 842]); // A4 Size
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const { companyName, invoiceNo, invoiceDate, customerName, description, amount } = invoiceData;
+  const { companyName, invoiceNo, invoiceDate, customerName, description, amount,address } = invoiceData;
 
   const pageWidth = 595;
 
@@ -33,7 +33,7 @@ export const createInvoicePDFBuffer = async (invoiceData) => {
 
   // Company Info Centered
   drawTextCenter(companyName, 770);
-  drawTextCenter("New Delhi, 110076", 755);
+  drawTextCenter(address, 755);
 
   // Invoice Details (Left & Right aligned with space)
   drawText(`Invoice No: ${invoiceNo}`, 50, 730);

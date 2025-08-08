@@ -37,6 +37,7 @@ export const createTransaction = async (req, res) => {
       customerName: user.fullname,
       description: "One month Basic plan",
       amount: amount,
+      address: settings.address,
     });
 
     // Convert PDF Buffer to Base64 String
@@ -80,20 +81,21 @@ export const getAllTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find()
       .populate({
-        path: 'user',
-        select: 'fullname email subscriptionPlan subscriptionExpirydate',
-        populate: {
-          path: 'subscriptionPlan',
-          model: 'SubscriptionPlan',
-          select: 'planName monthlyPrice yearlyPrice'
-        }
+        path: "user",
+        select: "fullname email subscriptionPlan subscriptionExpirydate",
       })
-      .populate('subscriptionPlan', 'planName monthlyPrice yearlyPrice')
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({ success: true, transactions });
+    return res.status(200).json({
+      success: true,
+      transactions,
+    });
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error("Error fetching transactions:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+

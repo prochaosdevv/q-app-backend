@@ -14,6 +14,7 @@ export const createSettings = async (req, res) => {
       desc,
       isMaintenanceMode = false,
       isUserAllowRegistration = true,
+      address,
     } = req.body;
 
     const newSettings = new Setting({
@@ -22,6 +23,7 @@ export const createSettings = async (req, res) => {
       desc,
       isMaintenanceMode,
       isUserAllowRegistration,
+      address
     });
 
     await newSettings.save();
@@ -55,6 +57,7 @@ export const updateSettings = async (req, res) => {
       desc,
       isMaintenanceMode,
       isUserAllowRegistration,
+      address
     } = req.body;
 
     const updatedSettings = await Setting.findOneAndUpdate(
@@ -66,6 +69,7 @@ export const updateSettings = async (req, res) => {
           desc,
           isMaintenanceMode,
           isUserAllowRegistration,
+          address
         },
       },
       {

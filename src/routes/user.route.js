@@ -21,7 +21,7 @@ router.post("/verify-otp", verifyToken, verifyOtp);
 router.post("/reset-password", verifyToken, resetPassword);
 
 router.post("/transaction/create", createTransaction);
-router.get("/get/all/transaction", getAllTransactions);
+
 
 
 

@@ -4,6 +4,7 @@ import { createPlan, deletePlan, getAllPlans, getPlanById, updatePlan } from "..
 import verifyAdminToken from "../middleware/adminAuth.js";
 import { getAdminProfile, getUserGrowthData, loginAdmin, registerAdmin, updateAdminPassword } from "../controllers/adminController.js";
 import { createSettings, getSettings, updateNotificationSettings, updateSettings } from "../controllers/settingController.js";
+import { getAllTransactions } from "../controllers/transactionController.js";
 
 const router = express.Router();
 
@@ -35,6 +36,9 @@ router.post('/create/setting', createSettings);
 router.get('/get/setting', getSettings);
 router.put('/update/setting', updateSettings);
 router.put('/update/notification-setting', updateNotificationSettings);
+
+
+router.get("/get/all/transaction", getAllTransactions);
 
 
 
