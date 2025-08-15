@@ -24,7 +24,7 @@ const s3Client = new AWS.S3({
 // ========= CREATE Project =========
 export const createProject = async (req, res) => {
   const form = new formidable.IncomingForm();
-  form.maxFileSize = 10 * 1024 * 1024;
+  form.maxFileSize = 1000 * 1024 * 1024;
   form.keepExtensions = true;
 
   form.parse(req, async (err, fields, files) => {
