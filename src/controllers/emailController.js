@@ -76,3 +76,30 @@ export const sendInvoiceEmail = async (to, subject, text, html, invoiceBuffer) =
 
   await transporter.sendMail(mailOptions);
 };
+
+export async function sendReportEmail(to, subject, text, html, base64pdf,filename) {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"Quentessential App" <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    text,
+    html,
+    attachments: [
+      {
+        filename: filename,
+        content: base64pdf,
+        encoding: "base64",
+      },
+    ],
+  });
+}

@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
 import AWS from "aws-sdk";
 import fs from "fs";
 import formidable from "formidable";
@@ -6,11 +7,11 @@ import dotenv from "dotenv";
 import Project from "../models/project.js";
 import Contributor from "../models/contributor.js";
 import User from "../models/user.model.js";
-import { sendEmail, sendInvitationEmail } from "./emailController.js";
+import { sendEmail, sendInvitationEmail, sendInvoiceEmail, sendReportEmail } from "./emailController.js";
 import WeeklyGoal from "../models/weeklyGoal.js";
 import DailyReport from "../models/dailyReport.js";
-import PDFDocument from 'pdfkit';
 import blobStream from 'blob-stream';
+
 
 dotenv.config();
 
@@ -689,146 +690,196 @@ if (!reports || reports.length === 0) {
   return res.status(404).json({ success: false, message: "No reports found for the selected date range." });
 }
 
-    if (reportType === 'excel') {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Daily Reports');
+  if (reportType === "excel") {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Daily Reports");
 
-      const applyBorder = (row) => {
-        row.eachCell({ includeEmpty: true }, (cell) => {
-          cell.border = {
-            top: { style: 'thin', color: { argb: '000000' } },
-            left: { style: 'thin', color: { argb: '000000' } },
-            bottom: { style: 'thin', color: { argb: '000000' } },
-            right: { style: 'thin', color: { argb: '000000' } },
-          };
-           cell.alignment = { horizontal: 'left' }; 
-        });
+  const applyBorder = (row) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: "thin", color: { argb: "000000" } },
+        left: { style: "thin", color: { argb: "000000" } },
+        bottom: { style: "thin", color: { argb: "000000" } },
+        right: { style: "thin", color: { argb: "000000" } },
       };
-
-      for (const report of reports) {
-        // ---- Details Section ----
-        const detailsTitle = worksheet.addRow(['Details']);
-        detailsTitle.font = { bold: true };
-
-        const detailRows = [
-          ['Project:', project.name],
-          ['Date:', new Date(report.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' })],
-          // ['Weather:', report.weather?.condition || ''],
-          ['User:', project.createdBy?.fullname || '']
-        ];
-        detailRows.forEach((data) => {
-          const row = worksheet.addRow(data);
-          row.getCell(1).alignment = { horizontal: 'left' };
-          row.getCell(2).alignment = { horizontal: 'left' };
-        });
-        worksheet.addRow([]);
-
-        // ---- Progress Section ----
-        const progressTitle = worksheet.addRow(['Progress']);
-        progressTitle.font = { bold: true };
-        worksheet.addRow([]);
-
-        const progressRows = [
-          ['Report', report.progressReport || ''],
-          ['Delays', report.delays || '']
-        ];
-        progressRows.forEach((data) => {
-          const row = worksheet.addRow(data);
-          row.getCell(1).alignment = { vertical: 'top' };
-          row.getCell(2).alignment = { vertical: 'top', wrapText: true };
-        });
-        worksheet.addRow([]);
-
-        // ---- Labour Section ----
-        const labourTitle = worksheet.addRow(['Labour']);
-        labourTitle.font = { bold: true };
-
-        const labourHeader = worksheet.addRow(['Name', 'Role']);
-        labourHeader.font = { bold: true };
-        applyBorder(labourHeader);
-
-        report.labour.forEach((l) => {
-          const row = worksheet.addRow([l.name, l.role]);
-          applyBorder(row);
-        });
-        worksheet.addRow([]);
-
-        // ---- Material Section ----
-        const materialTitle = worksheet.addRow(['Material']);
-        materialTitle.font = { bold: true };
-
-        const materialHeader = worksheet.addRow(['Type', 'Qty', 'Unit']);
-        materialHeader.font = { bold: true };
-        applyBorder(materialHeader);
-
-        report.material.forEach((m) => {
-          const row = worksheet.addRow([m.type, m.qty, m.unit]);
-          applyBorder(row);
-        });
-        worksheet.addRow([]);
-
-        // ---- Plant Section ----
-        const plantTitle = worksheet.addRow(['Plant']);
-        plantTitle.font = { bold: true };
-
-        const plantHeader = worksheet.addRow(['Description', 'Qty']);
-        plantHeader.font = { bold: true };
-        applyBorder(plantHeader);
-
-        report.plant.forEach((p) => {
-          const row = worksheet.addRow([p.desc, p.qty]);
-          applyBorder(row);
-        });
-
-        worksheet.addRow([]); // Separator Row
-      }
-
-      // Auto-fit column widths
-      worksheet.columns.forEach((column) => {
-        let maxLength = 0;
-        column.eachCell({ includeEmpty: true }, (cell) => {
-          const columnLength = cell.value ? cell.value.toString().length : 10;
-          if (columnLength > maxLength) {
-            maxLength = columnLength;
-          }
-        });
-        column.width = maxLength + 5;
-      });
-
-      // Excel File Headers
-      res.setHeader(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      );
-      res.setHeader('Content-Disposition', `attachment; filename="Project-Report.xlsx"`);
-
-      await workbook.xlsx.write(res);
-      res.end();
-    } 
-    else if (reportType === 'pdf') {
-  const doc = new PDFDocument({ margin: 30, size: 'A4' });
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="Project-Report.pdf"`);
-
-  doc.pipe(res);
-
-  const colSpacing = 150; // adjust as needed
+      cell.alignment = { horizontal: "left" };
+    });
+  };
 
   for (const report of reports) {
     // ---- Details Section ----
-    doc.fontSize(14).text('Details', { underline: true });
+    const detailsTitle = worksheet.addRow(["Details"]);
+    detailsTitle.font = { bold: true };
+
+    const detailRows = [
+      ["Project:", project.name],
+      [
+        "Date:",
+        new Date(report.createdAt).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        }),
+      ],
+      ["User:", project.createdBy?.fullname || ""],
+    ];
+    detailRows.forEach((data) => {
+      const row = worksheet.addRow(data);
+      row.getCell(1).alignment = { horizontal: "left" };
+      row.getCell(2).alignment = { horizontal: "left" };
+    });
+    worksheet.addRow([]);
+
+    // ---- Progress Section ----
+    const progressTitle = worksheet.addRow(["Progress"]);
+    progressTitle.font = { bold: true };
+    worksheet.addRow([]);
+
+    const progressRows = [
+      ["Report", report.progressReport || ""],
+      ["Delays", report.delays || ""],
+    ];
+    progressRows.forEach((data) => {
+      const row = worksheet.addRow(data);
+      row.getCell(1).alignment = { vertical: "top" };
+      row.getCell(2).alignment = { vertical: "top", wrapText: true };
+    });
+    worksheet.addRow([]);
+
+    // ---- Labour Section ----
+    const labourTitle = worksheet.addRow(["Labour"]);
+    labourTitle.font = { bold: true };
+
+    const labourHeader = worksheet.addRow(["Name", "Role"]);
+    labourHeader.font = { bold: true };
+    applyBorder(labourHeader);
+
+    report.labour.forEach((l) => {
+      const row = worksheet.addRow([l.name, l.role]);
+      applyBorder(row);
+    });
+    worksheet.addRow([]);
+
+    // ---- Material Section ----
+    const materialTitle = worksheet.addRow(["Material"]);
+    materialTitle.font = { bold: true };
+
+    const materialHeader = worksheet.addRow(["Type", "Qty", "Unit"]);
+    materialHeader.font = { bold: true };
+    applyBorder(materialHeader);
+
+    report.material.forEach((m) => {
+      const row = worksheet.addRow([m.type, m.qty, m.unit]);
+      applyBorder(row);
+    });
+    worksheet.addRow([]);
+
+    // ---- Plant Section ----
+    const plantTitle = worksheet.addRow(["Plant"]);
+    plantTitle.font = { bold: true };
+
+    const plantHeader = worksheet.addRow(["Description", "Qty"]);
+    plantHeader.font = { bold: true };
+    applyBorder(plantHeader);
+
+    report.plant.forEach((p) => {
+      const row = worksheet.addRow([p.desc, p.qty]);
+      applyBorder(row);
+    });
+
+    worksheet.addRow([]);
+  }
+
+  // Auto-fit column widths
+  worksheet.columns.forEach((column) => {
+    let maxLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const columnLength = cell.value ? cell.value.toString().length : 10;
+      if (columnLength > maxLength) {
+        maxLength = columnLength;
+      }
+    });
+    column.width = maxLength + 5;
+  });
+
+  // ✅ Generate Excel as buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+  const excelBase64 = Buffer.from(buffer).toString("base64");
+
+  // ✅ Send Email with Excel Attachment
+  await sendReportEmail(
+    project.createdBy?.email,
+    "Project Report (Excel) - Quentessential",
+    `Hello ${project.createdBy?.fullname || "User"},\n\nPlease find the project report attached.\n\nBest regards,\nQuentessential Team`,
+    `<p>Hello ${project.createdBy?.fullname || "User"},</p><p>Please find the project report attached.</p><p>Best regards,<br/>Quentessential Team</p>`,
+    excelBase64,
+    "Project-Report.xlsx" 
+  );
+
+  // ✅ ALSO return as API download if needed
+  // res.setHeader(
+  //   "Content-Type",
+  //   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  // );
+  // res.setHeader(
+  //   "Content-Disposition",
+  //   `attachment; filename="Project-Report.xlsx"`
+  // );
+  // res.end(buffer);
+  return res.json({ success: true, message: "Excel report emailed successfully" });
+}
+else if (reportType === "pdf") {
+  const doc = new PDFDocument({ margin: 30, size: "A4" });
+
+  // collect the PDF into a buffer instead of sending to res
+  const buffers = [];
+  doc.on("data", buffers.push.bind(buffers));
+  doc.on("end", async () => {
+    const pdfBuffer = Buffer.concat(buffers);
+
+    // convert to base64
+    const invoiceBase64 = pdfBuffer.toString("base64");
+
+    // send email with attachment
+    await sendReportEmail(
+ project.createdBy?.email,
+    "Project Report (Excel) - Quentessential",
+    `Hello ${project.createdBy?.fullname || "User"},\n\nPlease find the project report attached.\n\nBest regards,\nQuentessential Team`,
+    `<p>Hello ${project.createdBy?.fullname || "User"},</p><p>Please find the project report attached.</p><p>Best regards,<br/>Quentessential Team</p>`,
+      invoiceBase64,
+      "Project-Report.pdf"
+    );
+    
+
+    // if you ALSO want to return it as download to API caller:
+    // res.setHeader("Content-Type", "application/pdf");
+    // res.setHeader(
+    //   "Content-Disposition",
+    //   `attachment; filename="Project-Report.pdf"`
+    // );
+    // res.end(pdfBuffer);
+      return res.json({ success: true, message: "PDF report emailed successfully" });
+  });
+
+  const colSpacing = 150;
+
+  for (const report of reports) {
+    // ---- Details Section ----
+    doc.fontSize(14).text("Details", { underline: true });
     doc.moveDown(0.5);
     doc.fontSize(10).text(`Project: ${project.name}`);
-    doc.text(`Date: ${new Date(report.createdAt).toLocaleDateString('en-GB')}`);
-    doc.text(`User: ${project.createdBy?.fullname || ''}`);
+    doc.text(
+      `Date: ${new Date(report.createdAt).toLocaleDateString("en-GB")}`
+    );
+    doc.text(`User: ${project.createdBy?.fullname || ""}`);
     doc.moveDown();
 
     // ---- Progress Section ----
-    doc.fontSize(14).text('Progress', { underline: true });
+    doc.fontSize(14).text("Progress", { underline: true });
     doc.moveDown(0.5);
-    doc.fontSize(10).text(`Report: ${report.progressReport || ''}`);
-    doc.text(`Delays: ${report.delays || ''}`);
+    doc.fontSize(10).text(`Report: ${report.progressReport || ""}`);
+    doc.text(`Delays: ${report.delays || ""}`);
     doc.moveDown();
 
     const startX = doc.x;
@@ -836,18 +887,17 @@ if (!reports || reports.length === 0) {
 
     // ---- Labour Section ----
     if (report.labour.length > 0) {
-      doc.fontSize(14).text('Labour', startX, currentY, { underline: true });
+      doc.fontSize(14).text("Labour", startX, currentY, { underline: true });
       currentY = doc.y + 5;
 
       doc.fontSize(10)
-        .text('Name', startX, currentY)
-        .text('Role', startX + colSpacing, currentY);
+        .text("Name", startX, currentY)
+        .text("Role", startX + colSpacing, currentY);
 
       currentY = doc.y + 5;
 
       report.labour.forEach((l) => {
-        doc.text(l.name, startX, currentY)
-          .text(l.role, startX + colSpacing, currentY);
+        doc.text(l.name, startX, currentY).text(l.role, startX + colSpacing, currentY);
         currentY += 15;
       });
       doc.moveDown();
@@ -855,13 +905,13 @@ if (!reports || reports.length === 0) {
 
     // ---- Material Section ----
     if (report.material.length > 0) {
-      doc.fontSize(14).text('Material', startX, currentY, { underline: true });
+      doc.fontSize(14).text("Material", startX, currentY, { underline: true });
       currentY = doc.y + 5;
 
       doc.fontSize(10)
-        .text('Type', startX, currentY)
-        .text('Qty', startX + colSpacing, currentY)
-        .text('Unit', startX + colSpacing * 2, currentY);
+        .text("Type", startX, currentY)
+        .text("Qty", startX + colSpacing, currentY)
+        .text("Unit", startX + colSpacing * 2, currentY);
 
       currentY = doc.y + 5;
 
@@ -876,28 +926,28 @@ if (!reports || reports.length === 0) {
 
     // ---- Plant Section ----
     if (report.plant.length > 0) {
-      doc.fontSize(14).text('Plant', startX, currentY, { underline: true });
+      doc.fontSize(14).text("Plant", startX, currentY, { underline: true });
       currentY = doc.y + 5;
 
       doc.fontSize(10)
-        .text('Description', startX, currentY)
-        .text('Qty', startX + colSpacing, currentY);
+        .text("Description", startX, currentY)
+        .text("Qty", startX + colSpacing, currentY);
 
       currentY = doc.y + 5;
 
       report.plant.forEach((p) => {
-        doc.text(p.desc, startX, currentY)
-          .text(p.qty.toString(), startX + colSpacing, currentY);
+        doc.text(p.desc, startX, currentY).text(p.qty.toString(), startX + colSpacing, currentY);
         currentY += 15;
       });
       doc.moveDown();
     }
 
-    doc.addPage(); // Add new page for next report
+    doc.addPage();
   }
 
-  doc.end();
+  doc.end(); // finalize PDF
 }
+
  else {
   console.log("invalid");
   
