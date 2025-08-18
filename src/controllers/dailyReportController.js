@@ -288,7 +288,7 @@ export const getReportsByProject = async (req, res) => {
 
     const day = today.getDay();
     
-    const startDate = new Date(today - (day-2)*1000*60*60*24)
+    const startDate = new Date(today - (day-0)*1000*60*60*24)
     const startOfWeek = new Date(startDate);
     startOfWeek.setDate((startDate).getDate());
     startOfWeek.setHours(0, 0, 0, 0);
