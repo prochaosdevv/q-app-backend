@@ -615,9 +615,9 @@ today.setHours(0, 0, 0, 0); // reset to start of today
 if (dateType === "today") {
   startDate = new Date(today);
   endDate = new Date(today);
+  startDate.setHours(0, 0, 0, 0);
   endDate.setHours(23, 59, 59, 999);
 }
-
 else if (dateType === "yesterday") {
   startDate = new Date(today);
   startDate.setDate(startDate.getDate() - 1);
@@ -663,6 +663,7 @@ else if (dateType === "all") {
   startDate = null;
   endDate = null;
 }
+console.log(startDate,endDate);
 
 // MongoDB Query Build
 const query = {
@@ -898,6 +899,8 @@ if (!reports || reports.length === 0) {
   doc.end();
 }
  else {
+  console.log("invalid");
+  
       return res.status(400).json({ success: false, message: "Invalid reportType." });
     }
   } catch (error) {
