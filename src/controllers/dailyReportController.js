@@ -297,6 +297,8 @@ export const getReportsByProject = async (req, res) => {
     endOfWeek.setDate(startOfWeek.getDate() + 5);
     endOfWeek.setHours(23, 59, 59, 999);
 
+console.log(startDate,startOfWeek,endOfWeek);
+
     const reports = await DailyReport.find({ project: projectId,createdAt: { $gte: startOfWeek, $lte: endOfWeek }, })
       .populate("project")
       .populate("labour")
