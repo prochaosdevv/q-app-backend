@@ -65,7 +65,7 @@ router.post("/decline-invitation",verifyToken, declineInvitation);
 router.get("/contributors/:projectId", getContributorsByProject);
 
 router.post("/daily-report/create", createDailyReport);
-router.post("/latest-plant/:projectId", getLatestPlantByProject);
+router.get("/latest-plant/:projectId", getLatestPlantByProject);
 router.get("/daily-report/:reportId", getReportById); 
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.get("/get/past-report/by/:projectId", getPastReportsByProject); 
