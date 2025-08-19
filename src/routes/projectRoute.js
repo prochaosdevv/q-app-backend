@@ -17,7 +17,7 @@ import {
   getUserProjects
 } from "../controllers/projectController.js";
 import verifyToken from "../middleware/auth.js";
-import { createDailyReport, delaySuggestion, deleteDailyReport, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
+import { createDailyReport, delaySuggestion, deleteDailyReport, getLatestPlantByProject, getPastReportsByProject, getReportById, getReportsByProject, updateDailyReport } from "../controllers/dailyReportController.js";
 import { createWeeklyGoal, deleteWeeklyGoal, getCurrentWeek, getDailyReportsByWeeklyGoal, getGoalsByProjectAndDate, getPastGoals, getWeeklyGoalById, getWeeklyGoalsByProjectId, setCurrentWeekGoal, updateWeeklyGoal } from "../controllers/weeklyGoalController.js";
 
 const router = express.Router();
@@ -65,6 +65,7 @@ router.post("/decline-invitation",verifyToken, declineInvitation);
 router.get("/contributors/:projectId", getContributorsByProject);
 
 router.post("/daily-report/create", createDailyReport);
+router.post("/latest-plant/:projectId", getLatestPlantByProject);
 router.get("/daily-report/:reportId", getReportById); 
 router.get("/get/daily-report/by/:projectId", getReportsByProject); 
 router.get("/get/past-report/by/:projectId", getPastReportsByProject); 
