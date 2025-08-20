@@ -426,23 +426,24 @@ export const getLatestPlantByProject = async (req, res) => {
     if (!latestReport || !latestReport.plant || latestReport.plant.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No plant found for this project.",
+        message: "No plants found for this project.",
       });
     }
 
-    // Get the last created plant from the report
-    const latestPlant = latestReport.plant[latestReport.plant.length - 1];
+    // Get all plants from the latest report
+    const latestPlants = latestReport.plant;
 
     res.status(200).json({
       success: true,
-      message: "Latest plant fetched successfully.",
-      plant: latestPlant,
+      message: "Latest plants fetched successfully.",
+      plants: latestPlants,  // Note: sending an array now
     });
   } catch (error) {
-    console.error("Get latest plant error:", error);
+    console.error("Get latest plants error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error.",
     });
   }
 };
+
