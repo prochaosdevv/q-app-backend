@@ -104,8 +104,6 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // console.log(email, password);
-
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -127,6 +125,14 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
+    // ✅ Check and update expiry date if missing
+    if (!user.subscriptionExpirydate) {
+      const expiryDate = new Date(user.createdAt);
+      expiryDate.setMonth(expiryDate.getMonth() + 1); // 1 month after account creation
+      user.subscriptionExpirydate = expiryDate;
+      await user.save();
+    }
+
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
@@ -141,6 +147,7 @@ const loginUser = async (req, res) => {
         id: user._id,
         fullname: user.fullname,
         email: user.email,
+        subscriptionExpirydate: user.subscriptionExpirydate,
       },
     });
   } catch (error) {
@@ -151,6 +158,7 @@ const loginUser = async (req, res) => {
     });
   }
 };
+
 
 // ADD new user
 
