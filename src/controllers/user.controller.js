@@ -24,7 +24,7 @@ const uploadToS3 = async (file) => {
   const upload = await s3Client
     .upload({
       Bucket: process.env.IMAGE_BUCKET,
-      Key: `daily-reports/${Date.now()}-${file.originalFilename}`,
+      Key: `profile/${Date.now()}-${file.originalFilename}`,
       Body: fileContent,
       ContentType: file.mimetype,
     })
